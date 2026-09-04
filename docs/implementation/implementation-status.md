@@ -18,7 +18,7 @@ Légende : NOT_STARTED · IN_PROGRESS · BLOCKED · IMPLEMENTED · VERIFIED (ave
 | 12 | Rapports + export CSV | **VERIFIED** | page Reports |
 | 13 | Audit logs (who/what/when/before/after) | **VERIFIED** | page Audit + table audit_logs append-only |
 | 14 | Notifications IN_APP + moteur (templates, retry, DLQ) | **IMPLEMENTED** | centre UI vérifié ; moteur SQL 038 (canaux EMAIL/SMS/WhatsApp à brancher sur providers) |
-| 15 | REST API v1 (clés, scopes, idempotence, OpenAPI) | **IMPLEMENTED** | migrations 035/036 + conventions docs/api.md (Edge Functions à déployer) |
+| 15 | REST API v1 (clés, scopes, idempotence, OpenAPI) | **VERIFIED** (code + CI) | Edge Function `supabase/functions/api-v1` (dual auth clé API/JWT, scopes, idempotence, webhooks HMAC, rate limit) ; migration 051 contexte machine transaction-local ; `deno check` en CI ; déploiement documenté docs/api.md |
 | 16 | 7 langues + RTL arabe | **VERIFIED** | tests couverture ✓ (fr 100 %, en 100 %, autres >80 % du noyau) ; RTL via dir=rtl |
 | 17 | Réservation publique /book/:slug | **VERIFIED** | parcours E2E navigateur : confirmation HZ-2026-0011 ✓ |
 | 18 | SaaS (plans, quotas, usage, feature flags, Super Admin) | **VERIFIED** (adaptateur+SQL) | page Subscription vérifiée (usage 2/3, 17/100) ; migrations 039-050 |

@@ -68,3 +68,42 @@ paths:
         '402': { description: QUOTA_EXCEEDED }
 ```
 Le contrat complet sera généré depuis les schémas Zod partagés (prochaine itération).
+
+## Edge Function `api-v1` — implémentation de référence
+
+Le gateway complet vit dans `supabase/functions/api-v1/index.ts` (Deno). Déploiement :
+
+```bash
+supabase secrets set SUPABASE_DB_URL="postgresql://…pooler…/postgres"   # chemin machine
+supabase secrets set WEBHOOK_SECRET="$(openssl rand -hex 32)"           # HMAC webhooks
+supabase secrets set ALLOWED_ORIGINS="https://app.house-zen.com"
+supabase functions deploy api-v1
+```
+
+### Deux modes d'authentification, une seule autorité SQL
+| Mode | En-tête | Scoping |
+|---|---|---|
+| Machine (API key) | `X-API-Key: hz_…` | clé vérifiée par `hz_verify_api_key` (SHA-256, migration 036) ; le gateway applique les **scopes** ; les RPC métier tournent dans une transaction pg avec `SET LOCAL hz.tenant_id / hz.api_role` (migration 051) — contexte **transaction-local**, zéro fuite sur le pooling |
+| Utilisateur (JWT) | `Authorization: Bearer <jwt>` | client supabase utilisateur : RLS + fonctions SECURITY DEFINER, `auth.uid()` intact |
+
+### Scopes API keys (colonne `scopes`, migration 036)
+`read` · `write:reservations` · `write:invoices` · `write:payments` · `write:customers` · `admin`.
+Le rôle SQL utilisé en contexte machine est `receptionist` (profil opérationnel documenté,
+migration 051) — les scopes du gateway restent l'autorité fine, les permissions
+PostgreSQL la barrière de fond (défense en profondeur).
+
+### Idempotence des écritures
+`Idempotency-Key` requis sur `POST /reservations` et `POST /payments`. Réponses
+stockées dans `api_idempotency(tenant_id, key)` ; même clé + payload différent →
+`422 IDEMPOTENCY_CONFLICT`. `record_payment` dédoublonne en SQL (`p_idempotency_key`).
+
+### Webhooks entrants (`POST /api/v1/webhooks/payment`)
+Signature `X-HZ-Signature: hmac_sha256(raw_body, WEBHOOK_SECRET)` vérifiée en
+constant-time ; le tenant est dérivé du serveur (référence de réservation),
+jamais du payload ; traitement dédoublonné via `api_idempotency`.
+
+### Erreurs
+`{ "error": { "code", "message", "request_id" } }` — mapping : `ROOM_UNAVAILABLE`/
+`INVALID_DATES` → 409 · `QUOTA_EXCEEDED` → 402 · `BALANCE_DUE` → 409 ·
+`PERMISSION_DENIED`/`SCOPE_MISSING` → 403 · `IDEMPOTENCY_CONFLICT` → 422 ·
+rate limit → 429 + `Retry-After`.
