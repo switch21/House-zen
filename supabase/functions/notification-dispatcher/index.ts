@@ -38,7 +38,7 @@
  *             closed — the queue NEVER pretends to be sent).
  */
 
-import { Pool } from "npm:pg@8.11.5";
+import { Pool } from "npm:pg@8.16.3";
 
 const DB_URL = Deno.env.get("SUPABASE_DB_URL") ?? "";
 const LOG_ONLY = (Deno.env.get("DISPATCHER_LOG_ONLY") ?? "") === "1";

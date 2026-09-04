@@ -24,7 +24,7 @@
  */
 
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.45.4";
-import { Pool } from "npm:pg@8.11.5";
+import { Pool } from "npm:pg@8.16.3";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 // ---------------------------------------------------------------------------
