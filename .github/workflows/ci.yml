@@ -1,0 +1,48 @@
+name: HOUSE-ZEN CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit & integration tests
+        run: npm test
+
+      - name: Security checks (forbidden patterns)
+        run: |
+          echo "Scanning for dangerous patterns..."
+          ! grep -rn "SERVICE_ROLE_KEY" src/ || (echo "service role key referenced in frontend" && exit 1)
+          ! grep -rn "dangerouslySetInnerHTML" src/ || (echo "dangerous HTML injection" && exit 1)
+          ! grep -rEn "@ts-(ignore|nocheck)" src/ || (echo "ts-ignore forbidden" && exit 1)
+          ! grep -rEn ":\s*any\b" src/ --include="*.ts" --include="*.tsx" | grep -v "no-explicit-any" || true
+
+      - name: Build
+        run: npm run build
+
+      # E2E (Playwright) — install browsers on demand; blocking stage.
+      # - name: E2E
+      #   run: npx playwright install --with-deps chromium && npx playwright test
+
+  # NOTE: deploy stage targets Vercel (spec §22). Configure VERCEL_TOKEN secret.
+  # A failing critical stage above blocks this job.
