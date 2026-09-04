@@ -16,7 +16,28 @@ export interface Tenant {
   currency: string;
   timezone: string;
   locale: string;
+  /** Establishment branding — printed on documents (invoice header). */
+  address_line?: string | null;
+  city?: string | null;
+  country?: string | null;
+  phone?: string | null;
+  contact_email?: string | null;
+  website?: string | null;
+  tax_id?: string | null;
+  registration_no?: string | null;
+  logo_url?: string | null;
+  default_check_in_time?: string | null;
+  default_check_out_time?: string | null;
   created_at: string;
+}
+
+export interface TeamMember {
+  membership_id: UUID;
+  user_id: UUID;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  joined_at: string;
 }
 
 export type UserRole =

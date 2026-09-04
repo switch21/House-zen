@@ -14,6 +14,7 @@ import type {
   Quote,
   Reservation,
   ReservationStatus,
+  TeamMember,
   Tenant,
   TenantPlanCode,
   UUID,
@@ -159,6 +160,31 @@ export class SupabaseDataApi implements DataApi {
    */
   readIdDocument(entity: 'customers' | 'reservation_guests', id: UUID): Promise<string | null> {
     return this.rpc<string | null>('hz_read_id_document', { p_entity: entity, p_id: id });
+  }
+
+  /** Team page: memberships + profiles via SECURITY DEFINER RPC (team.read). */
+  async teamDirectory(): Promise<TeamMember[]> {
+    return this.rpc<TeamMember[]>('hz_team_directory', {});
+  }
+
+  /**
+   * Establishment logo upload → public bucket `branding` under the caller's
+   * tenant folder (storage RLS gates on settings.write). Returns the public
+   * URL to persist in tenants.logo_url.
+   */
+  async uploadLogo(file: File): Promise<string> {
+    const sb = getSupabaseClient();
+    const tenantId = await this.rpc<UUID>('hz_current_tenant', {});
+    const ext = (file.name.split('.').pop() ?? 'png').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `${tenantId}/logo-${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from('branding').upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'image/png',
+    });
+    if (error) throw new Error(`logo: ${error.message}`);
+    const { data } = sb.storage.from('branding').getPublicUrl(path);
+    return data.publicUrl;
   }
 
   /* ==================== AVAILABILITY & RESERVATIONS ==================== */

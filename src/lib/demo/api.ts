@@ -11,6 +11,7 @@ import {
   DomainError,
   type AvailableRoomType,
   type Notification,
+  type TeamMember,
   type Tenant,
   type Payment,
   type Quote,
@@ -276,6 +277,44 @@ export class DemoDataApi implements DataApi {
     const row = this.table(entity).find((r) => r.id === id && r.tenant_id === tenant);
     if (!row) return null;
     return (row.id_document as string | undefined) ?? null;
+  }
+
+  /**
+   * Team page (demo): derived from the demo user directory — users of the
+   * caller's tenant carry full_name / email / role. Mirrors the shape of the
+   * SQL RPC `hz_team_directory` (memberships ⨝ profiles).
+   */
+  async teamDirectory(): Promise<TeamMember[]> {
+    const user = this.currentUser();
+    if (!user.tenant_id) return [];
+    return this.db.users
+      .filter((u) => u.tenant_id === user.tenant_id)
+      .map((u) => ({
+        membership_id: `m-${u.id}` as UUID,
+        user_id: u.id as UUID,
+        email: u.email,
+        full_name: u.full_name,
+        role: u.role as TeamMember['role'],
+        joined_at: (u as { created_at?: string }).created_at ?? new Date().toISOString(),
+      }));
+  }
+
+  /** Logo (demo): persisted as a data URL on the demo tenant row. */
+  async uploadLogo(file: File): Promise<string> {
+    const tenantId = this.scope();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('logo: read failed'));
+      reader.readAsDataURL(file);
+    });
+    const tenant = this.db.tenants.find((t) => t.id === tenantId);
+    if (tenant) {
+      tenant.logo_url = dataUrl;
+      this.audit('tenants.updated', 'tenants', tenantId, null, { logo_url: '(data-url)' });
+      this.emitChange('tenants', 'UPDATE', tenantId);
+    }
+    return dataUrl;
   }
 
   /**

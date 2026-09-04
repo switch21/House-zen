@@ -12,6 +12,7 @@ import type {
   Quote,
   Reservation,
   ReservationStatus,
+  TeamMember,
   Tenant,
   TenantPlanCode,
   UserRole,
@@ -142,6 +143,21 @@ export interface DataApi {
    * Demo mirror: returns the in-memory stored value (documented simulation).
    */
   readIdDocument(entity: 'customers' | 'reservation_guests', id: UUID): Promise<string | null>;
+
+  /**
+   * Team directory (Settings → Équipe): memberships joined with profiles
+   * (email + full name). Real mode: SECURITY DEFINER RPC `hz_team_directory`,
+   * gated on `team.read` — profiles RLS only exposes the caller's own row.
+   * Demo: derived from the demo user directory (documented simulation).
+   */
+  teamDirectory(): Promise<TeamMember[]>;
+
+  /**
+   * Establishment logo (Settings → Général). Real mode: Supabase Storage
+   * bucket `branding`, object path `<tenantId>/logo-<ts>.<ext>`, returns the
+   * public URL to persist in `tenants.logo_url`. Demo: data URL.
+   */
+  uploadLogo(file: File): Promise<string>;
 
   searchAvailableRoomTypes(
     propertyId: UUID, checkIn: string, checkOut: string, adults: number,
