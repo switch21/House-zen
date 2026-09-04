@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { lazyRetry } from './lazyRetry';
 import { Route, Routes, Navigate, Link } from 'react-router-dom';
-import { RequireAuth, RequirePermission } from './guards';
+import { RequireAuth, RequirePermission, RequireSuperAdmin } from './guards';
 import { ROUTE_PERMISSIONS, type Permission } from '@/lib/permissions/rbac';
 import { useI18n } from '@/lib/i18n/provider';
 
@@ -41,7 +41,11 @@ const SettingsPage = lazyRetry(() => import('@/features/settings/SettingsPage'))
 const SubscriptionPage = lazyRetry(() => import('@/features/subscriptions/SubscriptionPage'));
 const NotificationsPage = lazyRetry(() => import('@/features/notifications/NotificationsPage'));
 const AuditPage = lazyRetry(() => import('@/features/audit/AuditPage'));
-const SuperAdminPage = lazyRetry(() => import('@/features/super-admin/SuperAdminPage'));
+const AdminLayout = lazyRetry(() => import('@/features/super-admin/AdminLayout'));
+const AdminDashboardPage = lazyRetry(() => import('@/features/super-admin/AdminDashboardPage'));
+const AdminTenantsPage = lazyRetry(() => import('@/features/super-admin/AdminTenantsPage'));
+const AdminUsersPage = lazyRetry(() => import('@/features/super-admin/AdminUsersPage'));
+const AdminPlansPage = lazyRetry(() => import('@/features/super-admin/AdminPlansPage'));
 const PublicBookingPage = lazyRetry(() => import('@/features/public-booking/PublicBookingPage'));
 
 /** Full-viewport loading placeholder shown while an async route chunk loads. */
@@ -126,7 +130,18 @@ export function AppRoutes() {
         {guarded('/app/subscription', <SubscriptionPage />)}
         {guarded('/app/notifications', <NotificationsPage />)}
         {guarded('/app/audit', <AuditPage />)}
-        {guarded('/admin', <SuperAdminPage />)}
+
+        {/* Platform back-office — profiles.is_super_admin only (spec §31). */}
+        <Route path="/admin" element={<RequireSuperAdmin />}>
+          <Route element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={suspense(<AdminDashboardPage />)} />
+            <Route path="tenants" element={suspense(<AdminTenantsPage />)} />
+            <Route path="users" element={suspense(<AdminUsersPage />)} />
+            <Route path="plans" element={suspense(<AdminPlansPage />)} />
+            <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+          </Route>
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFound />} />

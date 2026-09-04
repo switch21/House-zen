@@ -11,6 +11,7 @@ import {
   DomainError,
   type AvailableRoomType,
   type Notification,
+  type Plan,
   type TeamMember,
   type Tenant,
   type Payment,
@@ -20,7 +21,13 @@ import {
   type UUID,
 } from '@/types/domain';
 import type {
+  AdminMembership,
   AdminStats,
+  AdminCreateTenantInput,
+  AdminCreateUserInput,
+  AdminTenantOverview,
+  AdminTenantPatch,
+  AdminUser,
   AuthSession,
   CreateReservationInput,
   DataApi,
@@ -966,9 +973,16 @@ export class DemoDataApi implements DataApi {
       const plan = this.db.plans.find((p) => p.id === s.plan_id);
       return acc + ((plan?.monthly_price as number) ?? 0);
     }, 0);
+    const now = Date.now();
     return {
       tenantCount: this.db.tenants.length,
       activeTenants: this.db.tenants.filter((t) => t.status === 'ACTIVE').length,
+      suspendedTenants: this.db.tenants.filter((t) => t.status === 'SUSPENDED').length,
+      userCount: this.db.users.length,
+      superAdminCount: this.db.users.filter((u) => u.is_super_admin).length,
+      newUsers30d: this.db.users.filter(
+        (u) => u.created_at && now - Date.parse(u.created_at) <= 30 * 86_400_000,
+      ).length,
       subscriptionCount: {
         FREE: countBy('FREE'),
         STARTER: countBy('STARTER'),
@@ -982,6 +996,31 @@ export class DemoDataApi implements DataApi {
 
   async adminListTenants(): Promise<Tenant[]> {
     return this.db.tenants as unknown as Tenant[];
+  }
+
+  async adminTenantsOverview(): Promise<AdminTenantOverview[]> {
+    return (this.db.tenants as unknown as Tenant[]).map((t) => {
+      const activeSub = this.db.subscriptions.find(
+        (s) => s.tenant_id === t.id && s.status === 'ACTIVE',
+      );
+      const plan = activeSub
+        ? this.db.plans.find((p) => p.id === activeSub.plan_id)
+        : undefined;
+      return {
+        id: t.id as UUID,
+        name: t.name as string,
+        slug: t.slug as string,
+        status: t.status as Tenant['status'],
+        currency: t.currency as string,
+        timezone: t.timezone as string,
+        locale: t.locale as string,
+        created_at: t.created_at as string,
+        plan: (plan?.code as string) ?? null,
+        user_count: this.db.users.filter((u) => u.tenant_id === t.id).length,
+        property_count: this.db.properties.filter((p) => p.tenant_id === t.id).length,
+        room_count: this.db.rooms.filter((r) => r.tenant_id === t.id).length,
+      };
+    });
   }
 
   async adminSetTenantStatus(tenantId: UUID, status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED'): Promise<void> {
@@ -1000,6 +1039,226 @@ export class DemoDataApi implements DataApi {
     if (!f) throw new DomainError('NOT_FOUND', 'Flag not found');
     f.enabled = !f.enabled;
     this.audit('admin.feature_flag_toggled', 'feature_flags', id, null, { enabled: f.enabled });
+  }
+
+  /* ============ SUPER ADMIN BACK-OFFICE (migration 059 mirror) ============ */
+
+  /** Demo mirror: one membership per user (multi-tenant profiles are prod-only). */
+  private demoMemberships(u: DemoUser): AdminMembership[] {
+    if (!u.tenant_id) return [];
+    const t = this.db.tenants.find((x) => x.id === u.tenant_id);
+    return [
+      {
+        membership_id: `m-${u.id}` as UUID,
+        tenant_id: u.tenant_id,
+        tenant_name: (t?.name as string) ?? '',
+        role: u.role,
+      },
+    ];
+  }
+
+  private requireTenantExists(tenantId: UUID): Row {
+    const t = this.db.tenants.find((x) => x.id === tenantId);
+    if (!t) throw new DomainError('NOT_FOUND', 'TENANT_NOT_FOUND');
+    return t;
+  }
+
+  async adminListUsers(): Promise<AdminUser[]> {
+    return this.db.users.map((u) => ({
+      id: u.id as UUID,
+      email: u.email,
+      full_name: u.full_name,
+      locale: 'fr',
+      is_super_admin: u.is_super_admin,
+      created_at: u.created_at ?? new Date(0).toISOString(),
+      last_sign_in_at: null,
+      memberships: this.demoMemberships(u),
+    }));
+  }
+
+  async adminCreateUser(input: AdminCreateUserInput): Promise<void> {
+    const email = input.email.trim().toLowerCase();
+    if (this.db.users.some((u) => u.email.toLowerCase() === email)) {
+      throw new DomainError('VALIDATION', 'EMAIL_TAKEN');
+    }
+    if (!input.password || input.password.length < 8) {
+      throw new DomainError('VALIDATION', 'PASSWORD_TOO_SHORT');
+    }
+    const id = `u-${Math.random().toString(36).slice(2, 10)}`;
+    this.db.users.push({
+      id,
+      email,
+      password: input.password,
+      full_name: input.full_name.trim() || email,
+      role: 'receptionist',
+      tenant_id: null,
+      is_super_admin: false,
+      created_at: new Date().toISOString(),
+    });
+    this.audit('admin.user_created', 'profiles', id, null, { email });
+  }
+
+  async adminUpdateUser(userId: UUID, patch: { full_name?: string; locale?: string }): Promise<void> {
+    const u = this.db.users.find((x) => x.id === userId);
+    if (!u) throw new DomainError('NOT_FOUND', 'USER_NOT_FOUND');
+    if (patch.full_name) u.full_name = patch.full_name;
+    this.audit('admin.user_updated', 'profiles', userId, null, patch);
+  }
+
+  async adminSetUserPassword(userId: UUID, password: string): Promise<void> {
+    const u = this.db.users.find((x) => x.id === userId);
+    if (!u) throw new DomainError('NOT_FOUND', 'USER_NOT_FOUND');
+    if (password.length < 8) throw new DomainError('VALIDATION', 'PASSWORD_TOO_SHORT');
+    u.password = password;
+    this.audit('admin.user_password_reset', 'profiles', userId, null, null);
+  }
+
+  async adminDeleteUser(userId: UUID): Promise<void> {
+    const current = this.db.sessions.get('current');
+    if (current?.id === userId) throw new DomainError('VALIDATION', 'CANNOT_DELETE_SELF');
+    const idx = this.db.users.findIndex((x) => x.id === userId);
+    if (idx === -1) throw new DomainError('NOT_FOUND', 'USER_NOT_FOUND');
+    const [removed] = this.db.users.splice(idx, 1);
+    if (!removed) throw new DomainError('NOT_FOUND', 'USER_NOT_FOUND');
+    this.audit('admin.user_deleted', 'profiles', userId, { email: removed.email }, null);
+  }
+
+  async adminAssignUserToTenant(userId: UUID, tenantId: UUID, role: DemoUser['role']): Promise<void> {
+    const u = this.db.users.find((x) => x.id === userId);
+    if (!u) throw new DomainError('NOT_FOUND', 'USER_NOT_FOUND');
+    this.requireTenantExists(tenantId);
+    u.tenant_id = tenantId;
+    u.role = role;
+    this.audit('admin.user_assigned', 'memberships', userId, null, { tenant_id: tenantId, role });
+  }
+
+  async adminRemoveUserFromTenant(membershipId: UUID): Promise<void> {
+    // Demo membership ids are `m-<user id>` (see demoMemberships).
+    const userId = membershipId.replace(/^m-/, '');
+    const u = this.db.users.find((x) => x.id === userId);
+    if (!u) throw new DomainError('NOT_FOUND', 'MEMBERSHIP_NOT_FOUND');
+    u.tenant_id = null;
+    this.audit('admin.user_unassigned', 'memberships', membershipId, null, null);
+  }
+
+  async adminCreateTenant(input: AdminCreateTenantInput): Promise<void> {
+    const slug = input.slug.trim().toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(slug)) throw new DomainError('VALIDATION', 'INVALID_SLUG');
+    if (this.db.tenants.some((t) => t.slug === slug)) {
+      throw new DomainError('VALIDATION', 'SLUG_TAKEN');
+    }
+    const id = `t-${Math.random().toString(36).slice(2, 10)}`;
+    this.db.tenants.push({
+      id,
+      tenant_id: id,
+      name: input.name.trim(),
+      slug,
+      status: 'ACTIVE',
+      currency: input.currency.toUpperCase(),
+      timezone: input.timezone,
+      locale: input.locale,
+      created_at: new Date().toISOString(),
+    });
+    const free = this.db.plans.find((p) => p.code === 'FREE');
+    if (free) {
+      this.db.subscriptions.push({
+        id: `s-${Math.random().toString(36).slice(2, 10)}`,
+        tenant_id: id,
+        plan_id: free.id,
+        status: 'ACTIVE',
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 365 * 86_400_000).toISOString(),
+        trial_end: null,
+        created_at: new Date().toISOString(),
+      });
+    }
+    this.audit('admin.tenant_created', 'tenants', id, null, { name: input.name, slug });
+  }
+
+  async adminUpdateTenant(tenantId: UUID, patch: AdminTenantPatch): Promise<void> {
+    const t = this.requireTenantExists(tenantId);
+    if (patch.name) t.name = patch.name;
+    if (patch.slug) {
+      if (!/^[a-z0-9-]+$/.test(patch.slug)) throw new DomainError('VALIDATION', 'INVALID_SLUG');
+      t.slug = patch.slug;
+    }
+    if (patch.status) t.status = patch.status;
+    if (patch.currency) t.currency = patch.currency.toUpperCase();
+    if (patch.timezone) t.timezone = patch.timezone;
+    if (patch.locale) t.locale = patch.locale;
+    this.audit('admin.tenant_updated', 'tenants', tenantId, null, patch);
+  }
+
+  async adminDeleteTenant(tenantId: UUID): Promise<void> {
+    this.requireTenantExists(tenantId);
+    this.db.tenants = this.db.tenants.filter((t) => t.id !== tenantId);
+    for (const u of this.db.users) if (u.tenant_id === tenantId) u.tenant_id = null;
+    this.audit('admin.tenant_deleted', 'tenants', tenantId, null, null);
+  }
+
+  async adminSetTenantPlan(tenantId: UUID, planCode: string): Promise<void> {
+    this.requireTenantExists(tenantId);
+    const plan = this.db.plans.find((p) => p.code === planCode);
+    if (!plan) throw new DomainError('NOT_FOUND', 'PLAN_NOT_FOUND');
+    for (const s of this.db.subscriptions) {
+      if (s.tenant_id === tenantId && s.status === 'ACTIVE') {
+        s.status = 'CANCELLED';
+        s.current_period_end = new Date().toISOString();
+      }
+    }
+    this.db.subscriptions.push({
+      id: `s-${Math.random().toString(36).slice(2, 10)}`,
+      tenant_id: tenantId,
+      plan_id: plan.id,
+      status: 'ACTIVE',
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 365 * 86_400_000).toISOString(),
+      trial_end: null,
+      created_at: new Date().toISOString(),
+    });
+    this.audit('admin.tenant_plan_changed', 'subscriptions', tenantId, null, { plan: planCode });
+  }
+
+  async adminListPlans(): Promise<Plan[]> {
+    return this.db.plans
+      .map((p) => ({
+        ...(p as unknown as Plan),
+        features: (p.features as string[] | null) ?? [],
+      }))
+      .sort((a, b) => a.monthly_price - b.monthly_price);
+  }
+
+  async adminCreatePlan(input: Omit<Plan, 'id'>): Promise<void> {
+    if (this.db.plans.some((p) => p.code === input.code)) {
+      throw new DomainError('VALIDATION', 'CODE_TAKEN');
+    }
+    this.db.plans.push({
+      id: `pl-${Math.random().toString(36).slice(2, 10)}`,
+      tenant_id: null,
+      code: input.code,
+      name: input.name,
+      monthly_price: input.monthly_price,
+      currency: input.currency,
+      max_properties: input.max_properties,
+      max_rooms: input.max_rooms,
+      max_users: input.max_users,
+      features: input.features,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  async adminUpdatePlan(planId: UUID, patch: Partial<Omit<Plan, 'id'>>): Promise<void> {
+    const p = this.db.plans.find((x) => x.id === planId);
+    if (!p) throw new DomainError('NOT_FOUND', 'PLAN_NOT_FOUND');
+    Object.assign(p, patch);
+  }
+
+  async adminDeletePlan(planId: UUID): Promise<void> {
+    const idx = this.db.plans.findIndex((x) => x.id === planId);
+    if (idx === -1) throw new DomainError('NOT_FOUND', 'PLAN_NOT_FOUND');
+    const inUse = this.db.subscriptions.some((s) => s.plan_id === planId && s.status === 'ACTIVE');
+    if (inUse) throw new DomainError('VALIDATION', 'PLAN_IN_USE');
+    this.db.plans.splice(idx, 1);
   }
 
   /* ==================== PUBLIC BOOKING ==================== */

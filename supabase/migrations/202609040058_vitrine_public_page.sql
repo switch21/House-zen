@@ -121,7 +121,7 @@ begin
         and res.status in ('PENDING', 'CONFIRMED', 'CHECKED_IN')
         and p_check_in  < res.check_out_date
         and p_check_out > res.check_in_date)
-  order by r.name
+  order by r.room_number
   limit 1
   for update;
   if not found then

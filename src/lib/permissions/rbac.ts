@@ -26,7 +26,7 @@ export const PERMISSIONS = [
   'team.read', 'team.write',
   'settings.read', 'settings.write',
   'subscription.read', 'subscription.write',
-  'admin.tenants', 'admin.plans', 'admin.feature_flags', 'admin.impersonate',
+  'admin.tenants', 'admin.users', 'admin.plans', 'admin.feature_flags', 'admin.impersonate',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -112,4 +112,8 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   '/app/subscription': 'subscription.read',
   '/app/audit': 'audit.read',
   '/admin': 'admin.tenants',
+  '/admin/dashboard': 'admin.tenants',
+  '/admin/tenants': 'admin.tenants',
+  '/admin/users': 'admin.users',
+  '/admin/plans': 'admin.plans',
 };

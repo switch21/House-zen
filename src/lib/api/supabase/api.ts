@@ -6,17 +6,28 @@
  */
 
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { DataApi, ListParams, Paginated } from '../types';
+import type {
+  AdminCreateTenantInput,
+  AdminCreateUserInput,
+  AdminTenantOverview,
+  AdminTenantPatch,
+  AdminUser,
+  DataApi,
+  ListParams,
+  Paginated,
+} from '../types';
 import type {
   AvailableRoomType,
   Notification,
   Payment,
+  Plan,
   Quote,
   Reservation,
   ReservationStatus,
   TeamMember,
   Tenant,
   TenantPlanCode,
+  UserRole,
   UUID,
 } from '@/types/domain';
 
@@ -79,7 +90,9 @@ export class SupabaseDataApi implements DataApi {
       userId: user.id,
       email: user.email ?? '',
       fullName: (profile?.full_name as string) ?? (user.email ?? ''),
-      role: (first?.role as never) ?? 'receptionist',
+      // Super operators belong to no tenant: their UI role is super_admin,
+      // not the receptionist fallback (platform pages gate on admin.*).
+      role: (first?.role as never) ?? (profile?.is_super_admin ? 'super_admin' : 'receptionist'),
       isSuperAdmin: Boolean(profile?.is_super_admin),
       tenant,
       memberships: (memberships ?? []) as { tenant_id: UUID; role: never }[],
@@ -347,6 +360,119 @@ export class SupabaseDataApi implements DataApi {
 
   async adminToggleFeatureFlag(id: UUID): Promise<void> {
     await this.rpc('admin_toggle_feature_flag', { p_flag_id: id });
+  }
+
+  /* ==================== SUPER ADMIN BACK-OFFICE (migration 059) ==================== */
+
+  async adminTenantsOverview(): Promise<AdminTenantOverview[]> {
+    return this.rpc<AdminTenantOverview[]>('admin_tenants_overview', {});
+  }
+
+  async adminCreateTenant(input: AdminCreateTenantInput): Promise<void> {
+    await this.rpc('admin_create_tenant', {
+      p_name: input.name,
+      p_slug: input.slug,
+      p_currency: input.currency,
+      p_timezone: input.timezone,
+      p_locale: input.locale,
+    });
+  }
+
+  async adminUpdateTenant(tenantId: UUID, patch: AdminTenantPatch): Promise<void> {
+    await this.rpc('admin_update_tenant', {
+      p_tenant_id: tenantId,
+      p_name: patch.name ?? null,
+      p_slug: patch.slug ?? null,
+      p_status: patch.status ?? null,
+      p_currency: patch.currency ?? null,
+      p_timezone: patch.timezone ?? null,
+      p_locale: patch.locale ?? null,
+    });
+  }
+
+  async adminDeleteTenant(tenantId: UUID): Promise<void> {
+    await this.rpc('admin_delete_tenant', { p_tenant_id: tenantId });
+  }
+
+  async adminSetTenantPlan(tenantId: UUID, planCode: TenantPlanCode): Promise<void> {
+    await this.rpc('admin_set_tenant_plan', { p_tenant_id: tenantId, p_plan_code: planCode });
+  }
+
+  async adminListUsers(): Promise<AdminUser[]> {
+    return this.rpc<AdminUser[]>('admin_list_users', {});
+  }
+
+  async adminCreateUser(input: AdminCreateUserInput): Promise<void> {
+    await this.rpc('admin_create_user', {
+      p_email: input.email,
+      p_full_name: input.full_name,
+      p_password: input.password ?? '',
+      p_locale: input.locale ?? 'fr',
+    });
+  }
+
+  async adminUpdateUser(userId: UUID, patch: { full_name?: string; locale?: string }): Promise<void> {
+    await this.rpc('admin_update_user', {
+      p_user_id: userId,
+      p_full_name: patch.full_name ?? null,
+      p_locale: patch.locale ?? null,
+    });
+  }
+
+  async adminSetUserPassword(userId: UUID, password: string): Promise<void> {
+    await this.rpc('admin_set_user_password', { p_user_id: userId, p_password: password });
+  }
+
+  async adminDeleteUser(userId: UUID): Promise<void> {
+    await this.rpc('admin_delete_user', { p_user_id: userId });
+  }
+
+  async adminAssignUserToTenant(userId: UUID, tenantId: UUID, role: UserRole): Promise<void> {
+    await this.rpc('admin_assign_user_to_tenant', {
+      p_user_id: userId,
+      p_tenant_id: tenantId,
+      p_role: role,
+    });
+  }
+
+  async adminRemoveUserFromTenant(membershipId: UUID): Promise<void> {
+    await this.rpc('admin_remove_user_from_tenant', { p_membership_id: membershipId });
+  }
+
+  async adminListPlans(): Promise<Plan[]> {
+    const { data, error } = await this.sb
+      .from('plans')
+      .select('*')
+      .order('monthly_price');
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((p: AnyRow) => ({
+      ...(p as unknown as Plan),
+      features: (p.features as string[] | null) ?? [],
+    }));
+  }
+
+  async adminCreatePlan(input: Omit<Plan, 'id'>): Promise<void> {
+    const { error } = await this.sb.from('plans').insert({
+      code: input.code,
+      name: input.name,
+      monthly_price: input.monthly_price,
+      currency: input.currency,
+      max_properties: input.max_properties,
+      max_rooms: input.max_rooms,
+      max_users: input.max_users,
+      features: input.features,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async adminUpdatePlan(planId: UUID, patch: Partial<Omit<Plan, 'id'>>): Promise<void> {
+    const { error } = await this.sb.from('plans').update(patch).eq('id', planId);
+    if (error) throw new Error(error.message);
+  }
+
+  async adminDeletePlan(planId: UUID): Promise<void> {
+    const { error } = await this.sb.from('plans').delete().eq('id', planId);
+    if (error) throw new Error(error.message);
   }
 
   publicProperty(slug: string) {

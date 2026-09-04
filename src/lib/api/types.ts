@@ -9,6 +9,7 @@ import type {
   Notification,
   Payment,
   PaymentMethod,
+  Plan,
   Quote,
   Reservation,
   ReservationStatus,
@@ -82,8 +83,73 @@ export interface KPIs {
 export interface AdminStats {
   tenantCount: number;
   activeTenants: number;
-  subscriptionCount: Record<TenantPlanCode, number>;
+  suspendedTenants: number;
+  userCount: number;
+  superAdminCount: number;
+  newUsers30d: number;
+  subscriptionCount: Record<string, number>;
   totalRevenueMrr: number;
+}
+
+/** Membership of a platform user inside one tenant (super-admin back-office). */
+export interface AdminMembership {
+  membership_id: UUID;
+  tenant_id: UUID;
+  tenant_name: string;
+  role: UserRole;
+}
+
+/** Platform user (profiles ⋈ auth.users) as seen by the super admin. */
+export interface AdminUser {
+  id: UUID;
+  email: string;
+  full_name: string;
+  locale: string;
+  is_super_admin: boolean;
+  created_at: string;
+  last_sign_in_at: string | null;
+  memberships: AdminMembership[];
+}
+
+export interface AdminCreateUserInput {
+  email: string;
+  full_name: string;
+  locale?: string;
+  password?: string;
+}
+
+export interface AdminCreateTenantInput {
+  name: string;
+  slug: string;
+  currency: string;
+  timezone: string;
+  locale: string;
+}
+
+export type AdminTenantPatch = Partial<{
+  name: string;
+  slug: string;
+  status: Tenant['status'];
+  currency: string;
+  timezone: string;
+  locale: string;
+}>;
+
+/** Tenant row enriched with current plan + usage counters (back-office table). */
+export interface AdminTenantOverview {
+  id: UUID;
+  name: string;
+  slug: string;
+  status: Tenant['status'];
+  currency: string;
+  timezone: string;
+  locale: string;
+  created_at: string;
+  /** Current plan code — any operator-minted code (plans.code is text). */
+  plan: string | null;
+  user_count: number;
+  property_count: number;
+  room_count: number;
 }
 
 export interface CreateReservationInput {
@@ -195,9 +261,31 @@ export interface DataApi {
 
   adminStats(): Promise<AdminStats>;
   adminListTenants(): Promise<Tenant[]>;
+  adminTenantsOverview(): Promise<AdminTenantOverview[]>;
   adminSetTenantStatus(tenantId: UUID, status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED'): Promise<void>;
   adminListFeatureFlags(): Promise<{ id: UUID; key: string; enabled: boolean }[]>;
   adminToggleFeatureFlag(id: UUID): Promise<void>;
+
+  /* --- Tenants CRUD (super admin back-office) --- */
+  adminCreateTenant(input: AdminCreateTenantInput): Promise<void>;
+  adminUpdateTenant(tenantId: UUID, patch: AdminTenantPatch): Promise<void>;
+  adminDeleteTenant(tenantId: UUID): Promise<void>;
+  adminSetTenantPlan(tenantId: UUID, planCode: string): Promise<void>;
+
+  /* --- Users CRUD + tenant assignment (super admin back-office) --- */
+  adminListUsers(): Promise<AdminUser[]>;
+  adminCreateUser(input: AdminCreateUserInput): Promise<void>;
+  adminUpdateUser(userId: UUID, patch: { full_name?: string; locale?: string }): Promise<void>;
+  adminSetUserPassword(userId: UUID, password: string): Promise<void>;
+  adminDeleteUser(userId: UUID): Promise<void>;
+  adminAssignUserToTenant(userId: UUID, tenantId: UUID, role: UserRole): Promise<void>;
+  adminRemoveUserFromTenant(membershipId: UUID): Promise<void>;
+
+  /* --- Plans CRUD (super admin back-office) --- */
+  adminListPlans(): Promise<Plan[]>;
+  adminCreatePlan(input: Omit<Plan, 'id'>): Promise<void>;
+  adminUpdatePlan(planId: UUID, patch: Partial<Omit<Plan, 'id'>>): Promise<void>;
+  adminDeletePlan(planId: UUID): Promise<void>;
 
   publicProperty(slug: string): Promise<{
     id: UUID;

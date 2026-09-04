@@ -42,6 +42,13 @@ describe('rbac', () => {
     expect(can('manager', 'subscription.write')).toBe(false);
   });
 
+  it('admin permissions exist for the platform back-office', () => {
+    expect(can('owner', 'admin.users')).toBe(true);
+    expect(can('manager', 'admin.users')).toBe(false);
+    expect(can('super_admin', 'admin.tenants')).toBe(true);
+    expect(can('super_admin', 'admin.plans')).toBe(true);
+  });
+
   it('canAll / canAny combine correctly', () => {
     expect(canAll('owner', ['invoices.write', 'payments.write'])).toBe(true);
     expect(canAll('receptionist', ['invoices.write', 'payments.write'])).toBe(false);

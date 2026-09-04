@@ -42,3 +42,24 @@ export function RequirePermission({ permission }: { permission: Permission }) {
 export function permissionForPath(pathname: string): Permission | undefined {
   return ROUTE_PERMISSIONS[pathname];
 }
+
+/** Platform back-office gate: profiles.is_super_admin only (migration 059).
+ *  Stricter than RequirePermission — membership roles never unlock /admin,
+ *  even 'owner': the SQL RPCs reject them anyway, the UI must not tease. */
+export function RequireSuperAdmin() {
+  const { session } = useAuth();
+  const location = useLocation();
+  if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (session.pendingMfa) {
+    return <Navigate to="/mfa-challenge" replace state={{ from: location.pathname }} />;
+  }
+  if (!session.isSuperAdmin) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-2 text-center">
+        <p className="text-lg font-semibold">403</p>
+        <p className="text-sm text-muted-foreground">errors.forbidden</p>
+      </div>
+    );
+  }
+  return <Outlet />;
+}

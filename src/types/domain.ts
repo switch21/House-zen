@@ -494,7 +494,8 @@ export interface AuditLog {
 
 export interface Plan {
   id: UUID;
-  code: TenantPlanCode;
+  /** Any operator-minted code (plans.code is text since migration 059). */
+  code: string;
   name: string;
   monthly_price: number;
   currency: string;

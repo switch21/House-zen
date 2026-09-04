@@ -15,6 +15,8 @@ export interface DemoUser {
   role: 'owner' | 'manager' | 'receptionist' | 'accountant' | 'housekeeping' | 'maintenance' | 'super_admin';
   tenant_id: string | null;
   is_super_admin: boolean;
+  /** Platform back-office KPIs (super admin) — ISO instant. */
+  created_at?: string;
 }
 
 export interface Row {
@@ -81,13 +83,13 @@ export function buildSeed(): DemoDB {
   ];
 
   const users: DemoUser[] = [
-    { id: 'u-owner', email: 'owner@demo.house-zen.app', password: 'demo1234', full_name: 'Arlette Nkeng', role: 'owner', tenant_id: T, is_super_admin: false },
-    { id: 'u-manager', email: 'manager@demo.house-zen.app', password: 'demo1234', full_name: 'Serge Mbarga', role: 'manager', tenant_id: T, is_super_admin: false },
-    { id: 'u-reception', email: 'reception@demo.house-zen.app', password: 'demo1234', full_name: 'Clarisse Etoga', role: 'receptionist', tenant_id: T, is_super_admin: false },
-    { id: 'u-accountant', email: 'compta@demo.house-zen.app', password: 'demo1234', full_name: 'Patrick Ndongo', role: 'accountant', tenant_id: T, is_super_admin: false },
-    { id: 'u-housekeeping', email: 'menage@demo.house-zen.app', password: 'demo1234', full_name: 'Bernadette Oyono', role: 'housekeeping', tenant_id: T, is_super_admin: false },
-    { id: 'u-maintenance', email: 'tech@demo.house-zen.app', password: 'demo1234', full_name: 'Idriss Bello', role: 'maintenance', tenant_id: T, is_super_admin: false },
-    { id: 'u-superadmin', email: 'admin@house-zen.app', password: 'demo1234', full_name: 'Opérateurs HOUSE-ZEN', role: 'super_admin', tenant_id: null, is_super_admin: true },
+    { id: 'u-owner', email: 'owner@demo.house-zen.app', password: 'demo1234', full_name: 'Arlette Nkeng', role: 'owner', tenant_id: T, is_super_admin: false, created_at: new Date(Date.now() - 95 * 86_400_000).toISOString() },
+    { id: 'u-manager', email: 'manager@demo.house-zen.app', password: 'demo1234', full_name: 'Serge Mbarga', role: 'manager', tenant_id: T, is_super_admin: false, created_at: new Date(Date.now() - 90 * 86_400_000).toISOString() },
+    { id: 'u-reception', email: 'reception@demo.house-zen.app', password: 'demo1234', full_name: 'Clarisse Etoga', role: 'receptionist', tenant_id: T, is_super_admin: false, created_at: new Date(Date.now() - 88 * 86_400_000).toISOString() },
+    { id: 'u-accountant', email: 'compta@demo.house-zen.app', password: 'demo1234', full_name: 'Patrick Ndongo', role: 'accountant', tenant_id: T, is_super_admin: false, created_at: new Date(Date.now() - 60 * 86_400_000).toISOString() },
+    { id: 'u-housekeeping', email: 'menage@demo.house-zen.app', password: 'demo1234', full_name: 'Bernadette Oyono', role: 'housekeeping', tenant_id: T, is_super_admin: false, created_at: new Date(Date.now() - 45 * 86_400_000).toISOString() },
+    { id: 'u-maintenance', email: 'tech@demo.house-zen.app', password: 'demo1234', full_name: 'Idriss Bello', role: 'maintenance', tenant_id: T, is_super_admin: false, created_at: new Date(Date.now() - 12 * 86_400_000).toISOString() },
+    { id: 'u-superadmin', email: 'admin@house-zen.app', password: 'demo1234', full_name: 'Opérateurs HOUSE-ZEN', role: 'super_admin', tenant_id: null, is_super_admin: true, created_at: new Date(Date.now() - 120 * 86_400_000).toISOString() },
   ];
 
   const properties: R[] = [
