@@ -24,7 +24,7 @@ create policy api_keys_owner_write on api_keys
 
 create or replace function hz_verify_api_key(p_raw_key text)
 returns api_keys
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select k.* from api_keys k
   where k.prefix = left(p_raw_key, 8)
     and k.key_hash = encode(digest(p_raw_key, 'sha256'), 'hex')

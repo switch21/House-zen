@@ -64,7 +64,7 @@ revoke execute on function hz_pii_key() from public;
 -- ---------------------------------------------------------------------------
 create or replace function hz_encrypt_pii(p_plain text)
 returns text
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select case
     when p_plain is null or p_plain = '' then p_plain
     else 'hzenc.v1:'
@@ -74,7 +74,7 @@ $$;
 
 create or replace function hz_decrypt_pii(p_cipher text)
 returns text
-language sql stable security definer set search_path = public as $$
+language sql stable security definer set search_path = public, extensions as $$
   select case
     when p_cipher is null or p_cipher = '' then p_cipher
     when left(p_cipher, 9) = 'hzenc.v1:' then

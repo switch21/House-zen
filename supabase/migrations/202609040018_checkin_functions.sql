@@ -44,7 +44,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_tenant uuid := hz_current_tenant_id();
   v_res reservations;
-  v_invoice invoices;
+  v_invoice record; -- invoices crée plus loin (025) : rowtype résolu à l'exécution
   v_balance numeric(15,2);
   v_room_id uuid;
 begin

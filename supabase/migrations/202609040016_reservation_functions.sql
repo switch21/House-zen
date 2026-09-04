@@ -28,6 +28,30 @@ language sql stable security definer set search_path = public as $$
     );
 $$;
 
+-- Nightly rate resolution: base rate ± active season modifier (single source).
+create or replace function hz_nightly_rate(p_room_type_id uuid, p_check_in date)
+returns numeric(15,2)
+language sql stable security definer set search_path = public as $$
+  select round(
+    coalesce(b.price, rt.base_price) * (1 + coalesce(s.modifier_percent, 0) / 100.0), 2)
+  from room_types rt
+  left join lateral (
+    select rate.price from rates rate
+    where rate.room_type_id = p_room_type_id
+      and rate.valid_from <= p_check_in
+      and (rate.valid_to is null or rate.valid_to >= p_check_in)
+    order by rate.valid_from desc limit 1
+  ) b on true
+  left join lateral (
+    select rs.modifier_percent from rate_seasons rs
+    join properties pr on pr.id = rt.property_id
+    where rs.property_id = pr.id
+      and p_check_in between rs.start_date and rs.end_date
+    limit 1
+  ) s on true
+  where rt.id = p_room_type_id;
+$$;
+
 -- Public-friendly typed availability per room type.
 create or replace function search_available_room_types(
   p_property_id uuid,
@@ -54,30 +78,6 @@ language sql stable security definer set search_path = public as $$
     and rt.max_occupancy >= p_adults
   group by rt.id, rt.name, rt.description, rt.max_occupancy, t.currency
   having count(r.id) > 0;
-$$;
-
--- Nightly rate resolution: base rate ± active season modifier (single source).
-create or replace function hz_nightly_rate(p_room_type_id uuid, p_check_in date)
-returns numeric(15,2)
-language sql stable security definer set search_path = public as $$
-  select round(
-    coalesce(b.price, rt.base_price) * (1 + coalesce(s.modifier_percent, 0) / 100.0), 2)
-  from room_types rt
-  left join lateral (
-    select rate.price from rates rate
-    where rate.room_type_id = p_room_type_id
-      and rate.valid_from <= p_check_in
-      and (rate.valid_to is null or rate.valid_to >= p_check_in)
-    order by rate.valid_from desc limit 1
-  ) b on true
-  left join lateral (
-    select rs.modifier_percent from rate_seasons rs
-    join properties pr on pr.id = rt.property_id
-    where rs.property_id = pr.id
-      and p_check_in between rs.start_date and rs.end_date
-    limit 1
-  ) s on true
-  where rt.id = p_room_type_id;
 $$;
 
 -- Quote (taxes from tenant default tax rate; services priced at historical rates).

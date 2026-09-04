@@ -108,8 +108,9 @@ create trigger profiles_touch before update on profiles
 -- ------------------------------------------------------------- invitee ------
 -- Helper used by onboarding: create tenant + owner membership atomically.
 create table hz_schema_meta (
-  key text primary key,
+  key text not null,
   value text not null,
-  applied_at timestamptz not null default now()
+  applied_at timestamptz not null default now(),
+  primary key (key, value)
 );
 insert into hz_schema_meta(key, value) values ('migration', '202609040001_initial_schema');
