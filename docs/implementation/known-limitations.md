@@ -19,8 +19,11 @@
    fallback fr pour le reste ; complétion à planifier.
 7. **Performance** : code-splitting par route livré (shell 115 kB gzip 33 kB,
    29 chunks de pages 1–11 kB, charts isolés 308 kB chargés uniquement par
-   Dashboard/Reports) ; benchmarks de charge (100k réservations) à exécuter en
-   staging.
+   Dashboard/Reports, supabase 104 kB) ; vendors React regroupés en un chunk
+   unique `vendor` 537 kB (gzip 171 kB) — éclatement inter-chunks interdit :
+   les cycles d'évaluation Rollup produisent une page blanche silencieuse en
+   production (`forwardRef` undefined, cf. vite.config.ts §bundle strategy) ;
+   benchmarks de charge (100k réservations) à exécuter en staging.
 8. **Chiffrement PII** : **livré (migration 052)** — `id_document` chiffré au
    repos (pgcrypto AES-256), lecture uniquement via RPC auditée
    `hz_read_id_document` (RBAC + audit_logs). Reste à l'exploitant : créer la
