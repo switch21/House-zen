@@ -80,3 +80,10 @@ export function formatDate(iso: string, locale = 'fr-FR'): string {
     return iso;
   }
 }
+
+/** Formats a Postgres `time` value ("HH:mm" | "HH:mm:ss") as a locale clock. */
+export function formatTime(time: string, _locale = 'fr-FR'): string {
+  const m = /^(\d{1,2}):(\d{2})/.exec(time ?? '');
+  if (!m) return time;
+  return `${(m[1] ?? '0').padStart(2, '0')}:${m[2] ?? '00'}`;
+}

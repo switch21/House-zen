@@ -21,6 +21,7 @@ const CalendarPage = lazyRetry(() => import('@/features/calendar/CalendarPage'))
 const CheckinsPage = lazyRetry(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckinsPage })));
 const CheckoutsPage = lazyRetry(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckoutsPage })));
 const CustomersPage = lazyRetry(() => import('@/features/customers/CustomersPage'));
+const CustomerDetailPage = lazyRetry(() => import('@/features/customers/CustomerDetailPage'));
 const HousekeepingPage = lazyRetry(() => import('@/features/housekeeping/HousekeepingPage'));
 const MaintenancePage = lazyRetry(() => import('@/features/maintenance/MaintenancePage'));
 const ServicesPage = lazyRetry(() => import('@/features/services/ServicesPage'));
@@ -105,6 +106,7 @@ export function AppRoutes() {
         {guarded('/app/checkins', <CheckinsPage />)}
         {guarded('/app/checkouts', <CheckoutsPage />)}
         {guarded('/app/customers', <CustomersPage />)}
+        {guarded('/app/customers/:id', <CustomerDetailPage />)}
         {guarded('/app/housekeeping', <HousekeepingPage />)}
         {guarded('/app/maintenance', <MaintenancePage />)}
         {guarded('/app/services', <ServicesPage />)}

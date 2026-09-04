@@ -9,12 +9,20 @@ const config: EntityCrudConfig = {
   columns: [
     { name: 'name', labelKey: 'common.name', kind: 'text' },
     { name: 'property_id', labelKey: 'nav.properties', kind: 'text', ref: { entity: 'properties', labelColumn: 'name' } },
+    { name: 'kind', labelKey: 'roomTypes.kind', kind: 'select', options: [
+      { value: 'ROOM', labelKey: 'roomTypes.kind.ROOM' },
+      { value: 'APARTMENT', labelKey: 'roomTypes.kind.APARTMENT' },
+    ] },
     { name: 'max_occupancy', labelKey: 'roomTypes.maxOccupancy', kind: 'number' },
     { name: 'base_price', labelKey: 'roomTypes.basePrice', kind: 'money' },
   ],
   formFields: [
     { name: 'name', labelKey: 'common.name', kind: 'text' },
     { name: 'property_id', labelKey: 'nav.properties', kind: 'text', ref: { entity: 'properties', labelColumn: 'name' } },
+    { name: 'kind', labelKey: 'roomTypes.kind', kind: 'select', defaultValue: 'ROOM', options: [
+      { value: 'ROOM', labelKey: 'roomTypes.kind.ROOM' },
+      { value: 'APARTMENT', labelKey: 'roomTypes.kind.APARTMENT' },
+    ] },
     { name: 'description', labelKey: 'common.description', kind: 'textarea' },
     { name: 'max_occupancy', labelKey: 'roomTypes.maxOccupancy', kind: 'number', min: 1, defaultValue: 2 },
     { name: 'base_price', labelKey: 'roomTypes.basePrice', kind: 'money', min: 0 },

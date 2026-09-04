@@ -208,6 +208,8 @@ export class SupabaseDataApi implements DataApi {
       p_notes: input.notes ?? null,
       p_source: input.source,
       p_services: input.services ?? [],
+      p_check_in_time: input.check_in_time ?? '14:00',
+      p_check_out_time: input.check_out_time ?? '12:00',
     });
   }
 

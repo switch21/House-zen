@@ -102,20 +102,23 @@ export function buildSeed(): DemoDB {
   ];
 
   const room_types: R[] = [
-    { id: 'rt-standard', tenant_id: T, property_id: 'p-douala', name: 'Chambre Standard', description: 'Confort essentiel, lit queen, climatisation.', max_occupancy: 2, base_price: 35000, created_at: now },
-    { id: 'rt-deluxe', tenant_id: T, property_id: 'p-douala', name: 'Chambre Deluxe', description: 'Espace généreux, bureau, vue ville.', max_occupancy: 2, base_price: 55000, created_at: now },
-    { id: 'rt-suite', tenant_id: T, property_id: 'p-douala', name: 'Suite Exécutive', description: 'Salon séparé, kitchenette, service premium.', max_occupancy: 3, base_price: 95000, created_at: now },
-    { id: 'rt-family', tenant_id: T, property_id: 'p-douala', name: 'Chambre Familiale', description: 'Deux lits doubles, idéale familles.', max_occupancy: 4, base_price: 72000, created_at: now },
-    { id: 'rt-t2', tenant_id: T, property_id: 'p-bonapriso', name: 'Appartement T2 Meublé', description: 'Séjour + chambre, cuisine équipée.', max_occupancy: 4, base_price: 120000, created_at: now },
+    { id: 'rt-standard', tenant_id: T, property_id: 'p-douala', name: 'Chambre Standard', description: 'Confort essentiel, lit queen, climatisation.', kind: 'ROOM', max_occupancy: 2, base_price: 35000, created_at: now },
+    { id: 'rt-deluxe', tenant_id: T, property_id: 'p-douala', name: 'Chambre Deluxe', description: 'Espace généreux, bureau, vue ville.', kind: 'ROOM', max_occupancy: 2, base_price: 55000, created_at: now },
+    { id: 'rt-suite', tenant_id: T, property_id: 'p-douala', name: 'Suite Exécutive', description: 'Salon séparé, kitchenette, service premium.', kind: 'ROOM', max_occupancy: 3, base_price: 95000, created_at: now },
+    { id: 'rt-family', tenant_id: T, property_id: 'p-douala', name: 'Chambre Familiale', description: 'Deux lits doubles, idéale familles.', kind: 'ROOM', max_occupancy: 4, base_price: 72000, created_at: now },
+    { id: 'rt-t2', tenant_id: T, property_id: 'p-bonapriso', name: 'Appartement T2 Meublé', description: 'Séjour + chambre, cuisine équipée.', kind: 'APARTMENT', max_occupancy: 4, base_price: 120000, created_at: now },
   ];
 
   const rooms: R[] = [
-    ...[101, 102, 103, 104, 105, 106].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-standard', room_number: `${n}`, floor: 1, status: 'OPERATIONAL', housekeeping_state: n <= 103 ? 'CLEAN' : 'DIRTY', created_at: now })),
-    ...[201, 202, 203, 204].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-deluxe', room_number: `${n}`, floor: 2, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now })),
-    { id: 'r-301', tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-suite', room_number: '301', floor: 3, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now },
-    { id: 'r-302', tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-suite', room_number: '302', floor: 3, status: 'UNDER_MAINTENANCE', housekeeping_state: 'DIRTY', created_at: now },
-    ...[401, 402].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-douala', building_id: 'b-annexe', room_type_id: 'rt-family', room_number: `${n}`, floor: 1, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now })),
-    ...[501, 502, 503].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-bonapriso', building_id: 'b-res', room_type_id: 'rt-t2', room_number: `${n}`, floor: 1, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now })),
+    ...[101, 102, 103, 104, 105, 106].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-standard', room_number: `${n}`, floor: 1, parent_room_id: null, status: 'OPERATIONAL', housekeeping_state: n <= 103 ? 'CLEAN' : 'DIRTY', created_at: now })),
+    ...[201, 202, 203, 204].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-deluxe', room_number: `${n}`, floor: 2, parent_room_id: null, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now })),
+    { id: 'r-301', tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-suite', room_number: '301', floor: 3, parent_room_id: null, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now },
+    { id: 'r-302', tenant_id: T, property_id: 'p-douala', building_id: 'b-main', room_type_id: 'rt-suite', room_number: '302', floor: 3, parent_room_id: null, status: 'UNDER_MAINTENANCE', housekeeping_state: 'DIRTY', created_at: now },
+    ...[401, 402].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-douala', building_id: 'b-annexe', room_type_id: 'rt-family', room_number: `${n}`, floor: 1, parent_room_id: null, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now })),
+    ...[501, 502, 503].map((n) => ({ id: `r-${n}`, tenant_id: T, property_id: 'p-bonapriso', building_id: 'b-res', room_type_id: 'rt-t2', room_number: `${n}`, floor: 1, parent_room_id: null, status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now })),
+    // Bedrooms composing the furnished apartment unit 501 (T2 = séjour + chambre).
+    { id: 'r-501-c1', tenant_id: T, property_id: 'p-bonapriso', building_id: 'b-res', room_type_id: 'rt-t2', room_number: '501 · Chambre 1', floor: 1, parent_room_id: 'r-501', status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now },
+    { id: 'r-501-c2', tenant_id: T, property_id: 'p-bonapriso', building_id: 'b-res', room_type_id: 'rt-t2', room_number: '501 · Chambre 2', floor: 1, parent_room_id: 'r-501', status: 'OPERATIONAL', housekeeping_state: 'CLEAN', created_at: now },
   ];
 
   const amenities: R[] = [
@@ -157,14 +160,14 @@ export function buildSeed(): DemoDB {
   ];
 
   const customers: R[] = [
-    { id: 'c-1', tenant_id: T, full_name: 'Jean-Paul Fotso', email: 'jp.fotso@example.cm', phone: '+237 677 11 22 33', country: 'Cameroun', id_document: 'CNI-8812', notes: 'Client fidèle — suite si possible.', created_at: now },
-    { id: 'c-2', tenant_id: T, full_name: 'Amina Diallo', email: 'amina.diallo@example.sn', phone: '+221 77 555 12 12', country: 'Sénégal', id_document: 'PSP-4402', notes: null, created_at: now },
-    { id: 'c-3', tenant_id: T, full_name: 'Robert Ménard', email: 'r.menard@example.fr', phone: '+33 6 12 34 56 78', country: 'France', id_document: 'PSP-1120', notes: 'Arrive tard (~23h).', created_at: now },
-    { id: 'c-4', tenant_id: T, full_name: 'Grace Ayuk', email: 'grace.ayuk@example.cm', phone: '+237 691 44 55 66', country: 'Cameroun', id_document: null, notes: null, created_at: now },
-    { id: 'c-5', tenant_id: T, full_name: 'Kwame Mensah', email: 'kwame.mensah@example.gh', phone: '+233 24 555 88 99', country: 'Ghana', id_document: null, notes: null, created_at: now },
-    { id: 'c-6', tenant_id: T, full_name: 'Fatima Abubakar', email: 'fatima.a@example.ng', phone: '+234 803 555 77 66', country: 'Nigéria', id_document: null, notes: null, created_at: now },
-    { id: 'c-7', tenant_id: T, full_name: 'Lucienne Tabi', email: 'lucienne.tabi@example.cm', phone: '+237 699 22 33 44', country: 'Cameroun', id_document: null, notes: null, created_at: now },
-    { id: 'c-8', tenant_id: T, full_name: 'Oumarou Sanda', email: 'oumarou.s@example.cm', phone: '+237 655 66 77 88', country: 'Cameroun', id_document: null, notes: null, created_at: now },
+    { id: 'c-1', tenant_id: T, full_name: 'Jean-Paul Fotso', email: 'jp.fotso@example.cm', phone: '+237 677 11 22 33', country: 'Cameroun', id_document: 'CNI-8812', id_type: 'CNI', id_issue_date: '2019-06-14', id_issue_place: 'Douala', notes: 'Client fidèle — suite si possible.', created_at: now },
+    { id: 'c-2', tenant_id: T, full_name: 'Amina Diallo', email: 'amina.diallo@example.sn', phone: '+221 77 555 12 12', country: 'Sénégal', id_document: 'PSP-4402', id_type: 'PASSEPORT', id_issue_date: '2022-03-02', id_issue_place: 'Dakar', notes: null, created_at: now },
+    { id: 'c-3', tenant_id: T, full_name: 'Robert Ménard', email: 'r.menard@example.fr', phone: '+33 6 12 34 56 78', country: 'France', id_document: 'PSP-1120', id_type: 'PASSEPORT', id_issue_date: '2021-11-20', id_issue_place: 'Lyon', notes: 'Arrive tard (~23h).', created_at: now },
+    { id: 'c-4', tenant_id: T, full_name: 'Grace Ayuk', email: 'grace.ayuk@example.cm', phone: '+237 691 44 55 66', country: 'Cameroun', id_document: 'RC-2024-0887', id_type: 'RECEPISSE', id_issue_date: '2024-01-18', id_issue_place: 'Buea', notes: null, created_at: now },
+    { id: 'c-5', tenant_id: T, full_name: 'Kwame Mensah', email: 'kwame.mensah@example.gh', phone: '+233 24 555 88 99', country: 'Ghana', id_document: 'DL-4410-GH', id_type: 'PERMIS', id_issue_date: '2020-07-30', id_issue_place: 'Accra', notes: null, created_at: now },
+    { id: 'c-6', tenant_id: T, full_name: 'Fatima Abubakar', email: 'fatima.a@example.ng', phone: '+234 803 555 77 66', country: 'Nigéria', id_document: 'CNI-55219', id_type: 'CNI', id_issue_date: '2018-09-05', id_issue_place: 'Lagos', notes: null, created_at: now },
+    { id: 'c-7', tenant_id: T, full_name: 'Lucienne Tabi', email: 'lucienne.tabi@example.cm', phone: '+237 699 22 33 44', country: 'Cameroun', id_document: null, id_type: null, id_issue_date: null, id_issue_place: null, notes: null, created_at: now },
+    { id: 'c-8', tenant_id: T, full_name: 'Oumarou Sanda', email: 'oumarou.s@example.cm', phone: '+237 655 66 77 88', country: 'Cameroun', id_document: 'CNI-70345', id_type: 'CNI', id_issue_date: '2023-02-11', id_issue_place: 'Garoua', notes: null, created_at: now },
   ];
 
   const reservations: R[] = [
@@ -178,7 +181,11 @@ export function buildSeed(): DemoDB {
     { id: 'res-8', tenant_id: T, property_id: 'p-bonapriso', customer_id: 'c-8', reference: 'HZ-2026-0008', status: 'CHECKED_IN', check_in_date: addDaysISO(today, -1), check_out_date: addDaysISO(today, 6), adults: 2, children: 1, notes: null, total_amount: 840000, currency: 'XAF', source: 'BACK_OFFICE', created_at: now, updated_at: now },
     { id: 'res-9', tenant_id: T, property_id: 'p-douala', customer_id: 'c-1', reference: 'HZ-2026-0009', status: 'CONFIRMED', check_in_date: addDaysISO(today, 10), check_out_date: addDaysISO(today, 13), adults: 2, children: 0, notes: null, total_amount: 327750, currency: 'XAF', source: 'API', created_at: now, updated_at: now },
     { id: 'res-10', tenant_id: T, property_id: 'p-douala', customer_id: 'c-5', reference: 'HZ-2026-0010', status: 'CHECKED_OUT', check_in_date: addDaysISO(today, -20), check_out_date: addDaysISO(today, -16), adults: 1, children: 0, notes: null, total_amount: 220000, currency: 'XAF', source: 'BACK_OFFICE', created_at: now, updated_at: now },
-  ];
+  ].map((r) => ({
+    ...r,
+    check_in_time: r.id === 'res-2' ? '23:30:00' : r.id === 'res-4' ? '15:30:00' : '14:00:00',
+    check_out_time: r.id === 'res-9' ? '10:00:00' : '12:00:00',
+  }));
 
   const reservation_items: R[] = [
     { id: 'ri-1', tenant_id: T, reservation_id: 'res-1', room_id: 'r-101', room_type_id: 'rt-standard', nightly_rate: 55000, created_at: now },

@@ -91,7 +91,11 @@ export interface CreateReservationInput {
   room_id: UUID;
   room_type_id: UUID;
   check_in_date: string;
+  /** Arrival time "HH:mm" — defaults to 14:00 (hotel day). */
+  check_in_time?: string;
   check_out_date: string;
+  /** Departure time "HH:mm" — defaults to 12:00 (hotel day). */
+  check_out_time?: string;
   adults: number;
   children: number;
   notes?: string;

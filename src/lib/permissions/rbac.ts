@@ -94,6 +94,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   '/app/amenities': 'amenities.read',
   '/app/rates': 'rates.read',
   '/app/customers': 'customers.read',
+  '/app/customers/:id': 'customers.read',
   '/app/reservations': 'reservations.read',
   '/app/calendar': 'reservations.read',
   '/app/checkins': 'reservations.checkin',

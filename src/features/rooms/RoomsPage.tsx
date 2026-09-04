@@ -72,10 +72,13 @@ const config: EntityCrudConfig = {
   readPermission: 'rooms.read',
   writePermission: 'rooms.write',
   defaultSort: { room_number: 'asc' },
+  extraRefs: ['room_types'],
   columns: [
     { name: 'room_number', labelKey: 'rooms.roomNumber', kind: 'text' },
     { name: 'property_id', labelKey: 'nav.properties', kind: 'text', ref: { entity: 'properties', labelColumn: 'name' } },
+    { name: 'building_id', labelKey: 'rooms.building', kind: 'text', ref: { entity: 'buildings', labelColumn: 'name' } },
     { name: 'room_type_id', labelKey: 'nav.roomTypes', kind: 'text', ref: { entity: 'room_types', labelColumn: 'name' } },
+    { name: 'parent_room_id', labelKey: 'rooms.parentRoom', kind: 'text', ref: { entity: 'rooms', labelColumn: 'room_number' } },
     { name: 'floor', labelKey: 'rooms.floor', kind: 'number' },
     { name: 'status', labelKey: 'rooms.status', kind: 'select', options: [
       { value: 'OPERATIONAL', labelKey: 'roomStatus.OPERATIONAL' },
@@ -86,7 +89,15 @@ const config: EntityCrudConfig = {
   formFields: [
     { name: 'room_number', labelKey: 'rooms.roomNumber', kind: 'text' },
     { name: 'property_id', labelKey: 'nav.properties', kind: 'text', ref: { entity: 'properties', labelColumn: 'name' } },
+    { name: 'building_id', labelKey: 'rooms.building', kind: 'text', ref: { entity: 'buildings', labelColumn: 'name' } },
     { name: 'room_type_id', labelKey: 'nav.roomTypes', kind: 'text', ref: { entity: 'room_types', labelColumn: 'name' } },
+    { name: 'parent_room_id', labelKey: 'rooms.parentRoom', kind: 'text', ref: {
+      entity: 'rooms', labelColumn: 'room_number',
+      // Only furnished-apartment units can host bedrooms (join on room_types.kind).
+      filter: (room, refs) =>
+        room.parent_room_id === null &&
+        (refs['room_types'] ?? []).find((rt) => String(rt.id) === String(room.room_type_id))?.kind === 'APARTMENT',
+    } },
     { name: 'floor', labelKey: 'rooms.floor', kind: 'number', min: 0 },
     { name: 'status', labelKey: 'rooms.status', kind: 'select', options: [
       { value: 'OPERATIONAL', labelKey: 'roomStatus.OPERATIONAL' },

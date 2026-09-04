@@ -69,12 +69,16 @@ export interface Building {
   created_at: string;
 }
 
+export type RoomKind = 'ROOM' | 'APARTMENT';
+
 export interface RoomType {
   id: UUID;
   tenant_id: UUID;
   property_id: UUID;
   name: string;
   description: string;
+  /** APARTMENT = furnished apartment unit that may contain bedrooms. */
+  kind: RoomKind;
   max_occupancy: number;
   base_price: number;
   created_at: string;
@@ -91,6 +95,8 @@ export interface Room {
   room_type_id: UUID;
   room_number: string;
   floor: number | null;
+  /** For a bedroom inside a furnished apartment: its apartment unit. */
+  parent_room_id: UUID | null;
   status: RoomStatus;
   housekeeping_state: HousekeepingState;
   created_at: string;
@@ -146,6 +152,8 @@ export interface RateRule {
 
 /* ---------------------------- Customers ---------------------------- */
 
+export type CustomerIdType = 'CNI' | 'PASSEPORT' | 'PERMIS' | 'RECEPISSE';
+
 export interface Customer {
   id: UUID;
   tenant_id: UUID;
@@ -153,7 +161,12 @@ export interface Customer {
   email: string | null;
   phone: string;
   country: string | null;
+  /** Encrypted document NUMBER (PII, migration 052) — read via audited RPC. */
   id_document: string | null;
+  /** Classification metadata: document kind, issue date & place (clear). */
+  id_type: CustomerIdType | null;
+  id_issue_date: string | null;
+  id_issue_place: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -171,7 +184,11 @@ export interface Reservation {
   reference: string;
   status: ReservationStatus;
   check_in_date: string;
+  /** Arrival time, ISO "HH:mm:ss" (hotel-day default 14:00). */
+  check_in_time: string;
   check_out_date: string;
+  /** Departure time, ISO "HH:mm:ss" (hotel-day default 12:00). */
+  check_out_time: string;
   adults: number;
   children: number;
   notes: string | null;

@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useEntityList } from '@/hooks/useEntity';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getDataApi } from '@/lib/api';
-import { formatMoney, formatDate, isValidDateRange, addDaysISO, todayISO } from '@/lib/utils/money-dates';
+import { formatMoney, formatDate, formatTime, isValidDateRange, addDaysISO, todayISO } from '@/lib/utils/money-dates';
 import { DomainError, type Quote, type Reservation, type UUID } from '@/types/domain';
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'success' | 'warning' }> = {
@@ -45,7 +45,9 @@ export default function ReservationsPage() {
     room_type_id: '',
     room_id: '',
     check_in_date: todayISO(),
+    check_in_time: '14:00',
     check_out_date: addDaysISO(todayISO(), 2),
+    check_out_time: '12:00',
     adults: 2,
     children: 0,
     notes: '',
@@ -108,7 +110,9 @@ export default function ReservationsPage() {
       room_type_id: firstType ? String(firstType.id) : '',
       room_id: '',
       check_in_date: todayISO(),
+      check_in_time: '14:00',
       check_out_date: addDaysISO(todayISO(), 2),
+      check_out_time: '12:00',
       adults: 2,
       children: 0,
       notes: '',
@@ -139,7 +143,9 @@ export default function ReservationsPage() {
         room_id: form.room_id,
         room_type_id: form.room_type_id,
         check_in_date: form.check_in_date,
+        check_in_time: form.check_in_time,
         check_out_date: form.check_out_date,
+        check_out_time: form.check_out_time,
         adults: form.adults,
         children: form.children,
         notes: form.notes || undefined,
@@ -149,6 +155,9 @@ export default function ReservationsPage() {
     onSuccess: () => {
       setCreateOpen(false);
       refreshAll();
+    },
+    onError: (e) => {
+      setError(e instanceof Error ? e.message : t('common.error'));
     },
   });
 
@@ -263,8 +272,14 @@ export default function ReservationsPage() {
                       <TableCell className="font-mono text-xs">{r.reference}</TableCell>
                       <TableCell>{String(customersById.get(r.customer_id)?.full_name ?? '—')}</TableCell>
                       <TableCell>{room ? String(room.room_number) : '—'}</TableCell>
-                      <TableCell>{formatDate(r.check_in_date, locale)}</TableCell>
-                      <TableCell>{formatDate(r.check_out_date, locale)}</TableCell>
+                      <TableCell>
+                        {formatDate(r.check_in_date, locale)}
+                        <span className="ms-1.5 font-mono text-xs text-muted-foreground">{formatTime(r.check_in_time, locale)}</span>
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(r.check_out_date, locale)}
+                        <span className="ms-1.5 font-mono text-xs text-muted-foreground">{formatTime(r.check_out_time, locale)}</span>
+                      </TableCell>
                       <TableCell>{formatMoney(r.total_amount, r.currency, locale)}</TableCell>
                       <TableCell>
                         <StatusBadge status={r.status} map={Object.fromEntries(
@@ -349,21 +364,41 @@ export default function ReservationsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ci">{t('reservations.checkIn')}</Label>
-              <Input
-                id="ci"
-                type="date"
-                value={form.check_in_date}
-                onChange={(e) => void refreshQuote({ ...form, check_in_date: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="ci"
+                  type="date"
+                  className="flex-1"
+                  value={form.check_in_date}
+                  onChange={(e) => void refreshQuote({ ...form, check_in_date: e.target.value })}
+                />
+                <Input
+                  aria-label={t('reservations.checkInTime')}
+                  type="time"
+                  className="w-28"
+                  value={form.check_in_time}
+                  onChange={(e) => setForm((f) => ({ ...f, check_in_time: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="co">{t('reservations.checkOut')}</Label>
-              <Input
-                id="co"
-                type="date"
-                value={form.check_out_date}
-                onChange={(e) => void refreshQuote({ ...form, check_out_date: e.target.value })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="co"
+                  type="date"
+                  className="flex-1"
+                  value={form.check_out_date}
+                  onChange={(e) => void refreshQuote({ ...form, check_out_date: e.target.value })}
+                />
+                <Input
+                  aria-label={t('reservations.checkOutTime')}
+                  type="time"
+                  className="w-28"
+                  value={form.check_out_time}
+                  onChange={(e) => setForm((f) => ({ ...f, check_out_time: e.target.value }))}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="adults">{t('reservations.adults')}</Label>

@@ -5,7 +5,8 @@
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input, Label, Textarea } from '@/components/ui/input';
@@ -22,7 +23,7 @@ import { getDataApi, type EntityName } from '@/lib/api';
 import { formatMoney, formatDate } from '@/lib/utils/money-dates';
 import type { UUID } from '@/types/domain';
 
-export type FieldKind = 'text' | 'textarea' | 'number' | 'money' | 'select' | 'date' | 'checkbox' | 'email';
+export type FieldKind = 'text' | 'textarea' | 'number' | 'money' | 'select' | 'date' | 'time' | 'checkbox' | 'email';
 
 export interface FieldConfig {
   name: string;
@@ -30,7 +31,7 @@ export interface FieldConfig {
   kind: FieldKind;
   options?: { value: string; labelKey?: string; label?: string }[];
   /** Foreign entity for select options: [entity, labelColumn]. */
-  ref?: { entity: EntityName; labelColumn: string };
+  ref?: { entity: EntityName; labelColumn: string; /** Client-side option filter — may join extraRefs. */ filter?: (item: Record<string, unknown>, refs: Record<string, Record<string, unknown>[]>) => boolean };
   min?: number;
   step?: number;
   defaultValue?: string | number | boolean;
@@ -49,6 +50,11 @@ export interface EntityCrudConfig {
   defaultSort?: Record<string, 'asc' | 'desc'>;
   extraRowActions?: (row: Record<string, unknown>) => ReactNode;
   headerExtra?: ReactNode;
+  /** When set, each row links to a detail page (Eye action + clickable name). */
+  rowLink?: (row: Record<string, unknown>) => string;
+  /** Extra entities loaded into refOptions under their own entity name,
+   *  so ref filters can join (e.g. rooms whose room_type is an APARTMENT). */
+  extraRefs?: EntityName[];
   /** Called before create — return data to merge (e.g. tenant-computed fields). */
   beforeCreate?: (draft: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
@@ -101,6 +107,9 @@ function FieldInput({
   if (field.kind === 'date') {
     return <Input type="date" value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} />;
   }
+  if (field.kind === 'time') {
+    return <Input type="time" value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} />;
+  }
   return (
     <Input
       type={field.kind === 'email' ? 'email' : 'text'}
@@ -113,6 +122,7 @@ function FieldInput({
 export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
   const { t, locale } = useTranslation();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
@@ -135,9 +145,17 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
       const res = await getDataApi().list<Record<string, unknown>>(f.ref!.entity, { pageSize: 500 });
       next[f.name] = res.items;
     }
+    for (const e of config.extraRefs ?? []) {
+      const res = await getDataApi().list<Record<string, unknown>>(e, { pageSize: 500 });
+      next[e] = res.items;
+    }
+    // Apply option filters AFTER all lookup lists are available (joins allowed).
+    for (const f of refFields) {
+      if (f.ref!.filter) next[f.name] = (next[f.name] ?? []).filter((it) => f.ref!.filter!(it, next));
+    }
     setRefOptions(next);
     return next;
-  }, [config.formFields]);
+  }, [config.formFields, config.extraRefs]);
 
   useEffect(() => {
     void loadRefs();
@@ -166,13 +184,29 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
     setDialogOpen(true);
   }
 
+  /** Empty strings must become NULL for date/time/number/enum (FK) columns —
+   *  Postgres rejects '' for these types (invalid input syntax / enum value). */
+  function cleanDraft(d: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = { ...d };
+    for (const f of config.formFields) {
+      if (
+        out[f.name] === '' &&
+        (f.kind === 'date' || f.kind === 'time' || f.kind === 'number' ||
+          f.kind === 'money' || f.kind === 'select' || f.ref)
+      ) {
+        out[f.name] = null;
+      }
+    }
+    return out;
+  }
+
   async function submit() {
     setError(null);
     try {
       if (editing) {
-        await update.mutateAsync({ id: editing.id as UUID, data: draft });
+        await update.mutateAsync({ id: editing.id as UUID, data: cleanDraft(draft) });
       } else {
-        const payload = config.beforeCreate ? await config.beforeCreate(draft) : draft;
+        const payload = config.beforeCreate ? await config.beforeCreate(cleanDraft(draft)) : cleanDraft(draft);
         await create.mutateAsync(payload);
       }
       setDialogOpen(false);
@@ -253,7 +287,11 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
               </TableHeader>
               <TableBody>
                 {data.items.map((row) => (
-                  <TableRow key={String(row.id)}>
+                  <TableRow
+                    key={String(row.id)}
+                    className={config.rowLink ? 'cursor-pointer' : undefined}
+                    onClick={config.rowLink ? () => navigate(config.rowLink!(row)) : undefined}
+                  >
                     {visibleColumns.map((c) => (
                       <TableCell key={c.name} className="max-w-64 truncate">
                         {cellValue(row, c)}
@@ -261,13 +299,23 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
                     ))}
                     <TableCell className="text-end">
                       <div className="flex items-center justify-end gap-1">
+                        {config.rowLink ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="view"
+                            onClick={(e) => { e.stopPropagation(); navigate(config.rowLink!(row)); }}
+                          >
+                            <Eye size={14} />
+                          </Button>
+                        ) : null}
                         {config.extraRowActions?.(row)}
                         {writeAllowed ? (
                           <>
-                            <Button variant="ghost" size="icon" aria-label="edit" onClick={() => openEdit(row)}>
+                            <Button variant="ghost" size="icon" aria-label="edit" onClick={(e) => { e.stopPropagation(); openEdit(row); }}>
                               <Pencil size={14} />
                             </Button>
-                            <Button variant="ghost" size="icon" aria-label="delete" onClick={() => removeRow(row)}>
+                            <Button variant="ghost" size="icon" aria-label="delete" onClick={(e) => { e.stopPropagation(); removeRow(row); }}>
                               <Trash2 size={14} className="text-destructive" />
                             </Button>
                           </>
