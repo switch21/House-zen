@@ -128,7 +128,7 @@ end $$;
 create or replace function admin_list_users()
 returns jsonb
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(x order by x.created_at desc), '[]'::jsonb)
+  select coalesce(jsonb_agg(x.u order by x.created_at desc), '[]'::jsonb)
   from (
     select jsonb_build_object(
       'id', pr.id, 'email', pr.email::text, 'full_name', pr.full_name,
@@ -140,10 +140,10 @@ language sql stable security definer set search_path = public as $$
             'tenant_name', t.name, 'role', m.role) order by m.created_at)
         from memberships m join tenants t on t.id = m.tenant_id
         where m.user_id = pr.id), '[]'::jsonb)
-    ) as x, pr.created_at
+    ) as u, pr.created_at
     from profiles pr
     left join auth.users u on u.id = pr.id
-  ) s;
+  ) x;
 $$;
 
 create or replace function admin_assign_user_to_tenant(
@@ -185,7 +185,7 @@ end $$;
 create or replace function admin_tenants_overview()
 returns jsonb
 language sql stable security definer set search_path = public as $$
-  select coalesce(jsonb_agg(x order by x.created_at), '[]'::jsonb)
+  select coalesce(jsonb_agg(x.u order by x.created_at), '[]'::jsonb)
   from (
     select jsonb_build_object(
       'id', t.id, 'name', t.name, 'slug', t.slug, 'status', t.status,
@@ -198,9 +198,9 @@ language sql stable security definer set search_path = public as $$
       'user_count', (select count(*) from memberships m where m.tenant_id = t.id),
       'property_count', (select count(*) from properties pr where pr.tenant_id = t.id),
       'room_count', (select count(*) from rooms r where r.tenant_id = t.id)
-    ) as x, t.created_at
+    ) as u, t.created_at
     from tenants t
-  ) s;
+  ) x;
 $$;
 
 create or replace function admin_create_tenant(
@@ -302,6 +302,9 @@ alter table plans alter column code type text using code::text;
 alter table plans add constraint plans_code_format check (btrim(code) <> '' and char_length(code) <= 20);
 
 -- plan_code enum → text fallout: redefine the two functions comparing codes.
+-- The enum overload of change_plan is DROPPED: PostgREST cannot pick between
+-- change_plan(plan_code) and change_plan(text) for a JSON string argument.
+drop function if exists change_plan(plan_code);
 create or replace function change_plan(p_plan_code text)
 returns void
 language plpgsql security definer set search_path = public as $$
