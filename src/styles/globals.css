@@ -29,6 +29,7 @@
     --ring: 174 80% 26%;
     --radius: 0.625rem;
     --sidebar: 172 55% 14%;
+    --sidebar-foreground: 168 30% 92%;
   }
   .dark {
     --background: 175 40% 8%;
@@ -55,6 +56,7 @@
     --input: 175 25% 25%;
     --ring: 172 70% 40%;
     --sidebar: 176 45% 10%;
+    --sidebar-foreground: 168 25% 92%;
   }
   * { @apply border-border; }
   html { -webkit-font-smoothing: antialiased; }
