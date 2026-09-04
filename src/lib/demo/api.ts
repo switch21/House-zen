@@ -1015,12 +1015,18 @@ export class DemoDataApi implements DataApi {
       city: property.city as string,
       country: property.country as string,
       currency: (tenant?.currency as string) ?? 'XAF',
+      description: (property.description as string) ?? '',
+      photos: Array.isArray(property.photos) ? (property.photos as string[]) : [],
+      phone: (property.phone as string) ?? '',
+      email: (property.email as string) ?? '',
       room_types: this.db.room_types
         .filter((rt) => rt.property_id === property.id)
         .map((rt) => ({
           id: rt.id as UUID,
           name: rt.name as string,
           description: rt.description as string,
+          kind: rt.kind as 'ROOM' | 'APARTMENT',
+          photos: Array.isArray(rt.photos) ? (rt.photos as string[]) : [],
           base_price: rt.base_price as number,
           max_occupancy: rt.max_occupancy as number,
         })),

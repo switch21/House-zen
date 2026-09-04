@@ -206,7 +206,14 @@ export interface DataApi {
     city: string;
     country: string;
     currency: string;
-    room_types: { id: UUID; name: string; description: string; base_price: number; max_occupancy: number }[];
+    description: string;
+    photos: string[];
+    phone: string;
+    email: string;
+    room_types: {
+      id: UUID; name: string; description: string; base_price: number; max_occupancy: number;
+      kind?: 'ROOM' | 'APARTMENT'; photos?: string[];
+    }[];
   } | null>;
   publicSearchAvailability(
     slug: string, checkIn: string, checkOut: string, adults: number,

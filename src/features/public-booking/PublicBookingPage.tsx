@@ -1,14 +1,17 @@
 /**
- * HOUSE-ZEN — Public booking engine (PHASE 11), route /book/:propertySlug.
- * Reuses the SAME availability engine as the back office (spec §10/§11).
- * Prices are ALWAYS recomputed server-side; the browser quote is indicative.
- * No account required; idempotency key prevents double submits.
+ * HOUSE-ZEN — Public vitrine + booking engine (PHASE 11 / vitrine v2), route
+ * /book/:propertySlug. Commercial presentation page of each tenant property:
+ * cover + gallery, description, rooms & apartments with photos, availability
+ * search and anonymous booking. Reuses the SAME availability engine as the
+ * back office (spec §10/§11). Prices are ALWAYS recomputed server-side; the
+ * browser quote is indicative. No account required; idempotency key prevents
+ * double submits (server: reservations.idempotency_key).
  */
 
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { CalendarDays, Hotel, MapPin, ShieldCheck, Users } from 'lucide-react';
+import { Building2, CalendarDays, Hotel, ImageOff, Mail, MapPin, Phone, ShieldCheck, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Label } from '@/components/ui/input';
@@ -20,6 +23,16 @@ import { addDaysISO, formatMoney, isValidDateRange, nightsBetween, todayISO } fr
 import { uuid } from '@/lib/utils';
 import { DomainError, type AvailableRoomType } from '@/types/domain';
 
+interface RoomTypeCard {
+  id: string;
+  name: string;
+  description: string;
+  kind?: 'ROOM' | 'APARTMENT';
+  photos?: string[];
+  base_price: number;
+  max_occupancy: number;
+}
+
 interface PropertyDetails {
   id: string;
   name: string;
@@ -27,7 +40,11 @@ interface PropertyDetails {
   city: string;
   country: string;
   currency: string;
-  room_types: { id: string; name: string; description: string; base_price: number; max_occupancy: number }[];
+  description?: string;
+  photos?: string[];
+  phone?: string;
+  email?: string;
+  room_types: RoomTypeCard[];
 }
 
 export default function PublicBookingPage() {
@@ -94,6 +111,17 @@ export default function PublicBookingPage() {
   const p = property as PropertyDetails | null | undefined;
   const currency = p?.currency ?? 'XAF';
   const estimate = selected ? selected.nightly_rate * Math.max(nights, 1) : 0;
+  const photos = Array.isArray(p?.photos) ? p!.photos.filter((u) => typeof u === 'string' && u) : [];
+  const cover = photos[0];
+  const gallery = photos.slice(1, 5);
+  const roomPhotos = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const rt of p?.room_types ?? []) {
+      const first = Array.isArray(rt.photos) ? rt.photos.find((u) => typeof u === 'string' && u) : undefined;
+      if (first) map.set(rt.id, first);
+    }
+    return map;
+  }, [p]);
 
   if (isLoading) {
     return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">{t('common.loading')}</div>;
@@ -111,19 +139,28 @@ export default function PublicBookingPage() {
 
   return (
     <div className="min-h-screen bg-secondary/50">
-      <header className="bg-gradient-to-r from-[hsl(var(--sidebar))] to-primary/80 px-6 py-10 text-white">
-        <div className="mx-auto max-w-4xl">
-          <div className="flex items-center gap-2 text-sm opacity-80">
+      {/* ---------------------------------------------------------- hero --- */}
+      <header className="relative overflow-hidden">
+        {cover ? (
+          <>
+            <img src={cover} alt={p.name} className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" aria-hidden="true" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--sidebar))] to-primary/80" aria-hidden="true" />
+        )}
+        <div className="relative mx-auto flex min-h-[16rem] max-w-5xl flex-col justify-end px-6 py-10 text-white">
+          <div className="flex items-center gap-2 text-sm opacity-90">
             <Hotel size={16} /> {t('app.name')} — {t('booking.title')}
           </div>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">{p.name}</h1>
-          <p className="mt-1 flex items-center gap-1 text-sm opacity-90">
+          <h1 className="mt-2 text-3xl font-bold tracking-tight drop-shadow sm:text-4xl">{p.name}</h1>
+          <p className="mt-1 flex items-center gap-1 text-sm opacity-95">
             <MapPin size={14} /> {p.city}, {p.country}
           </p>
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
+      <main className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
         {bookingResult ? (
           <Card className="border-success/40">
             <CardHeader>
@@ -142,7 +179,80 @@ export default function PublicBookingPage() {
           </Card>
         ) : (
           <>
-            {/* Search bar */}
+            {/* ---------------------------------------------- gallery --- */}
+            {gallery.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {gallery.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`${p.name} — photo ${i + 2}`}
+                    loading="lazy"
+                    className="h-28 w-full rounded-xl object-cover shadow-sm sm:h-36"
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {/* ------------------------------------------------ about --- */}
+            {p.description ? (
+              <Card>
+                <CardContent className="p-4 sm:p-5">
+                  <h2 className="mb-1.5 flex items-center gap-2 text-base font-semibold">
+                    <Building2 size={16} className="text-primary" /> {t('booking.about')}
+                  </h2>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.description}</p>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {/* ------------------------------- rooms & apartments grid --- */}
+            {p.room_types.length > 0 ? (
+              <section className="space-y-3">
+                <h2 className="text-lg font-semibold">{t('booking.ourRooms')}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {p.room_types.map((rt) => (
+                    <Card key={rt.id} className="overflow-hidden">
+                      {Array.isArray(rt.photos) && rt.photos.length > 0 ? (
+                        <img
+                          src={rt.photos[0]}
+                          alt={rt.name}
+                          loading="lazy"
+                          className="h-40 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-28 w-full items-center justify-center bg-muted text-muted-foreground">
+                          <ImageOff size={22} />
+                        </div>
+                      )}
+                      <CardContent className="space-y-1.5 p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-semibold">{rt.name}</h3>
+                          {rt.kind === 'APARTMENT' ? (
+                            <Badge variant="secondary">{t('roomTypes.kind.APARTMENT')}</Badge>
+                          ) : null}
+                        </div>
+                        {rt.description ? (
+                          <p className="line-clamp-2 text-sm text-muted-foreground">{rt.description}</p>
+                        ) : null}
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Users size={13} /> {rt.max_occupancy} {t('booking.persons')}
+                          </span>
+                          <span className="text-sm">
+                            <span className="mr-1 text-xs text-muted-foreground">{t('booking.fromPrice')}</span>
+                            <strong>{formatMoney(rt.base_price, currency, locale)}</strong>
+                            <span className="text-xs text-muted-foreground"> {t('booking.perNight')}</span>
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {/* ------------------------------------------- search bar --- */}
             <Card>
               <CardContent className="grid gap-3 p-4 sm:grid-cols-4">
                 <div className="space-y-1.5">
@@ -184,7 +294,7 @@ export default function PublicBookingPage() {
               </p>
             ) : null}
 
-            {/* Offers */}
+            {/* ------------------------------------------------ offers --- */}
             {offers ? (
               offers.length === 0 ? (
                 <Card>
@@ -200,15 +310,25 @@ export default function PublicBookingPage() {
                       className={selected?.room_type_id === o.room_type_id ? 'border-primary ring-1 ring-primary' : ''}
                     >
                       <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{o.name}</h3>
-                            <Badge variant="success">{t('booking.available')}</Badge>
+                        <div className="flex min-w-0 gap-3">
+                          {roomPhotos.get(o.room_type_id) ? (
+                            <img
+                              src={roomPhotos.get(o.room_type_id)}
+                              alt={o.name}
+                              loading="lazy"
+                              className="h-16 w-24 flex-none rounded-lg object-cover"
+                            />
+                          ) : null}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{o.name}</h3>
+                              <Badge variant="success">{t('booking.available')}</Badge>
+                            </div>
+                            <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{o.description}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {o.available_rooms} × {t('booking.available')} · max {o.max_occupancy} {t('booking.guests').toLowerCase()}
+                            </p>
                           </div>
-                          <p className="mt-0.5 text-sm text-muted-foreground">{o.description}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {o.available_rooms} × {t('booking.available')} · max {o.max_occupancy} {t('booking.guests').toLowerCase()}
-                          </p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-end">
@@ -232,7 +352,7 @@ export default function PublicBookingPage() {
               )
             ) : null}
 
-            {/* Guest form */}
+            {/* -------------------------------------------- guest form --- */}
             {selected ? (
               <Card>
                 <CardHeader>
@@ -284,6 +404,24 @@ export default function PublicBookingPage() {
             ) : null}
           </>
         )}
+
+        {/* -------------------------------------------------- contacts --- */}
+        {(p.phone || p.email) && !bookingResult ? (
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-1 p-4 text-sm text-muted-foreground">
+              {p.phone ? (
+                <span className="flex items-center gap-1.5">
+                  <Phone size={14} className="text-primary" /> {p.phone}
+                </span>
+              ) : null}
+              {p.email ? (
+                <span className="flex items-center gap-1.5">
+                  <Mail size={14} className="text-primary" /> {p.email}
+                </span>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <p className="flex items-center justify-center gap-1.5 pt-2 text-center text-xs text-muted-foreground">
           <ShieldCheck size={13} /> {t('booking.securedBy')} · © {new Date().getFullYear()} {p.name}

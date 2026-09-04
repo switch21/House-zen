@@ -78,6 +78,10 @@ export interface Property {
   email: string;
   timezone: string;
   is_published: boolean;
+  /** Shown on the public vitrine page (first photo = cover). */
+  description: string;
+  /** Public image URLs (Storage hz-media or external). */
+  photos: string[];
   created_at: string;
 }
 
@@ -102,6 +106,8 @@ export interface RoomType {
   kind: RoomKind;
   max_occupancy: number;
   base_price: number;
+  /** Public image URLs shown on the vitrine page. */
+  photos: string[];
   created_at: string;
 }
 

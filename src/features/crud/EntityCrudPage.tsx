@@ -21,9 +21,10 @@ import { useAuth } from '@/lib/auth/context';
 import { can, type Permission } from '@/lib/permissions/rbac';
 import { getDataApi, type EntityName } from '@/lib/api';
 import { formatMoney, formatDate } from '@/lib/utils/money-dates';
+import { PhotosInput } from '@/features/crud/PhotosInput';
 import type { UUID } from '@/types/domain';
 
-export type FieldKind = 'text' | 'textarea' | 'number' | 'money' | 'select' | 'date' | 'time' | 'checkbox' | 'email';
+export type FieldKind = 'text' | 'textarea' | 'number' | 'money' | 'select' | 'date' | 'time' | 'checkbox' | 'email' | 'photos';
 
 export interface FieldConfig {
   name: string;
@@ -48,7 +49,6 @@ export interface EntityCrudConfig {
   columns: FieldConfig[];
   formFields: FieldConfig[];
   defaultSort?: Record<string, 'asc' | 'desc'>;
-  extraRowActions?: (row: Record<string, unknown>) => ReactNode;
   headerExtra?: ReactNode;
   /** When set, each row links to a detail page (Eye action + clickable name). */
   rowLink?: (row: Record<string, unknown>) => string;
@@ -57,6 +57,8 @@ export interface EntityCrudConfig {
   extraRefs?: EntityName[];
   /** Called before create — return data to merge (e.g. tenant-computed fields). */
   beforeCreate?: (draft: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  /** Translation function is injected so configs can stay module-level. */
+  extraRowActions?: (row: Record<string, unknown>, t: (k: string) => string) => ReactNode;
 }
 
 function FieldInput({
@@ -76,6 +78,9 @@ function FieldInput({
   }
   if (field.kind === 'checkbox') {
     return <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4" aria-label={label} />;
+  }
+  if (field.kind === 'photos') {
+    return <PhotosInput value={value} onChange={(v) => onChange(v)} />;
   }
   if (field.kind === 'select' && field.options) {
     return (
@@ -164,7 +169,9 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
   async function openCreate() {
     const initial: Record<string, unknown> = {};
     for (const f of config.formFields) {
-      initial[f.name] = f.defaultValue ?? (f.kind === 'checkbox' ? false : f.kind === 'number' || f.kind === 'money' ? null : '');
+      initial[f.name] =
+        f.defaultValue ??
+        (f.kind === 'checkbox' ? false : f.kind === 'photos' ? [] : f.kind === 'number' || f.kind === 'money' ? null : '');
     }
     const refs = await loadRefs();
     for (const f of config.formFields.filter((x) => x.ref)) {
@@ -309,7 +316,7 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
                             <Eye size={14} />
                           </Button>
                         ) : null}
-                        {config.extraRowActions?.(row)}
+                        {config.extraRowActions?.(row, t)}
                         {writeAllowed ? (
                           <>
                             <Button variant="ghost" size="icon" aria-label="edit" onClick={(e) => { e.stopPropagation(); openEdit(row); }}>

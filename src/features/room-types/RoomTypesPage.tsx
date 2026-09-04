@@ -24,6 +24,7 @@ const config: EntityCrudConfig = {
       { value: 'APARTMENT', labelKey: 'roomTypes.kind.APARTMENT' },
     ] },
     { name: 'description', labelKey: 'common.description', kind: 'textarea' },
+    { name: 'photos', labelKey: 'roomTypes.photos', kind: 'photos' },
     { name: 'max_occupancy', labelKey: 'roomTypes.maxOccupancy', kind: 'number', min: 1, defaultValue: 2 },
     { name: 'base_price', labelKey: 'roomTypes.basePrice', kind: 'money', min: 0 },
   ],

@@ -91,8 +91,8 @@ export function buildSeed(): DemoDB {
   ];
 
   const properties: R[] = [
-    { id: 'p-douala', tenant_id: T, name: 'Zen Palace Douala', slug: 'zen-palace-douala', property_type: 'HOTEL', address: '123 Bd de la Liberté', city: 'Douala', country: 'Cameroun', phone: '+237 690 00 00 01', email: 'palace@zen.cm', timezone: 'Africa/Douala', is_published: true, created_at: now },
-    { id: 'p-bonapriso', tenant_id: T, name: 'Zen Résidences Bonapriso', slug: 'zen-residences-bonapriso', property_type: 'RESIDENCE', address: '8 Rue Njo-Njo', city: 'Douala', country: 'Cameroun', phone: '+237 690 00 00 02', email: 'bonapriso@zen.cm', timezone: 'Africa/Douala', is_published: true, created_at: now },
+    { id: 'p-douala', tenant_id: T, name: 'Zen Palace Douala', slug: 'zen-palace-douala', property_type: 'HOTEL', address: '123 Bd de la Liberté', city: 'Douala', country: 'Cameroun', phone: '+237 690 00 00 01', email: 'palace@zen.cm', timezone: 'Africa/Douala', is_published: true, description: 'Au cœur de Douala, le Zen Palace combine hébergement élégant et art de vivre camerounais : chambres climatisées, wifi fibre, restaurant, piscine, parking sécurisé et réception 24h/24.', photos: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80', 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1600&q=80', 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1600&q=80', 'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?auto=format&fit=crop&w=1600&q=80'], created_at: now },
+    { id: 'p-bonapriso', tenant_id: T, name: 'Zen Résidences Bonapriso', slug: 'zen-residences-bonapriso', property_type: 'RESIDENCE', address: '8 Rue Njo-Njo', city: 'Douala', country: 'Cameroun', phone: '+237 690 00 00 02', email: 'bonapriso@zen.cm', timezone: 'Africa/Douala', is_published: true, description: 'Appartements meublés haut de gamme au cœur de Bonapriso : séjour lumineux, cuisine équipée, ménage inclus.', photos: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1600&q=80', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1600&q=80'], created_at: now },
   ];
 
   const buildings: R[] = [
@@ -102,11 +102,11 @@ export function buildSeed(): DemoDB {
   ];
 
   const room_types: R[] = [
-    { id: 'rt-standard', tenant_id: T, property_id: 'p-douala', name: 'Chambre Standard', description: 'Confort essentiel, lit queen, climatisation.', kind: 'ROOM', max_occupancy: 2, base_price: 35000, created_at: now },
-    { id: 'rt-deluxe', tenant_id: T, property_id: 'p-douala', name: 'Chambre Deluxe', description: 'Espace généreux, bureau, vue ville.', kind: 'ROOM', max_occupancy: 2, base_price: 55000, created_at: now },
-    { id: 'rt-suite', tenant_id: T, property_id: 'p-douala', name: 'Suite Exécutive', description: 'Salon séparé, kitchenette, service premium.', kind: 'ROOM', max_occupancy: 3, base_price: 95000, created_at: now },
-    { id: 'rt-family', tenant_id: T, property_id: 'p-douala', name: 'Chambre Familiale', description: 'Deux lits doubles, idéale familles.', kind: 'ROOM', max_occupancy: 4, base_price: 72000, created_at: now },
-    { id: 'rt-t2', tenant_id: T, property_id: 'p-bonapriso', name: 'Appartement T2 Meublé', description: 'Séjour + chambre, cuisine équipée.', kind: 'APARTMENT', max_occupancy: 4, base_price: 120000, created_at: now },
+    { id: 'rt-standard', tenant_id: T, property_id: 'p-douala', name: 'Chambre Standard', description: 'Confort essentiel, lit queen, climatisation.', kind: 'ROOM', max_occupancy: 2, base_price: 35000, photos: ['https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80'], created_at: now },
+    { id: 'rt-deluxe', tenant_id: T, property_id: 'p-douala', name: 'Chambre Deluxe', description: 'Espace généreux, bureau, vue ville.', kind: 'ROOM', max_occupancy: 2, base_price: 55000, photos: ['https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=80'], created_at: now },
+    { id: 'rt-suite', tenant_id: T, property_id: 'p-douala', name: 'Suite Exécutive', description: 'Salon séparé, kitchenette, service premium.', kind: 'ROOM', max_occupancy: 3, base_price: 95000, photos: ['https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80'], created_at: now },
+    { id: 'rt-family', tenant_id: T, property_id: 'p-douala', name: 'Chambre Familiale', description: 'Deux lits doubles, idéale familles.', kind: 'ROOM', max_occupancy: 4, base_price: 72000, photos: ['https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1200&q=80'], created_at: now },
+    { id: 'rt-t2', tenant_id: T, property_id: 'p-bonapriso', name: 'Appartement T2 Meublé', description: 'Séjour + chambre, cuisine équipée.', kind: 'APARTMENT', max_occupancy: 4, base_price: 120000, photos: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80'], created_at: now },
   ];
 
   const rooms: R[] = [
