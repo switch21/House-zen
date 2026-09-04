@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 168 30% 97%;
+    --foreground: 170 45% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 170 45% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 170 45% 12%;
+    --primary: 174 80% 26%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 168 25% 92%;
+    --secondary-foreground: 170 40% 18%;
+    --muted: 168 20% 93%;
+    --muted-foreground: 170 12% 42%;
+    --accent: 40 92% 52%;
+    --accent-foreground: 30 60% 12%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 65% 34%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 30 60% 12%;
+    --border: 168 20% 86%;
+    --input: 168 20% 82%;
+    --ring: 174 80% 26%;
+    --radius: 0.625rem;
+    --sidebar: 172 55% 14%;
+  }
+  .dark {
+    --background: 175 40% 8%;
+    --foreground: 168 25% 92%;
+    --card: 175 35% 11%;
+    --card-foreground: 168 25% 92%;
+    --popover: 175 35% 11%;
+    --popover-foreground: 168 25% 92%;
+    --primary: 172 70% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 175 28% 17%;
+    --secondary-foreground: 168 25% 88%;
+    --muted: 175 28% 16%;
+    --muted-foreground: 170 12% 62%;
+    --accent: 40 92% 52%;
+    --accent-foreground: 30 60% 12%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 55% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 30 60% 12%;
+    --border: 175 25% 22%;
+    --input: 175 25% 25%;
+    --ring: 172 70% 40%;
+    --sidebar: 176 45% 10%;
+  }
+  * { @apply border-border; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-background text-foreground; }
+  [dir='rtl'] { text-align: right; }
+}
+
+@layer utilities {
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: hsl(var(--muted-foreground) / 0.35); border-radius: 9999px; }
+  .focus-ring { @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2; }
+}
