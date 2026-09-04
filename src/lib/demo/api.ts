@@ -30,6 +30,7 @@ import type {
   PublicBookingInput,
   RecordPaymentInput,
 } from '@/lib/api/types';
+import { dataChangeBus, type RealtimeEventType } from '@/lib/realtime/bus';
 import { buildSeed, DEMO_TENANT_ID, type DemoDB, type DemoUser, type Row } from './store';
 import {
   addMoney,
@@ -228,6 +229,7 @@ export class DemoDataApi implements DataApi {
     };
     this.table(entity).push(row);
     this.audit(`${entity}.created`, entity, row.id, null, row);
+    this.emitChange(entity, 'INSERT', row.id);
     return row as unknown as T;
   }
 
@@ -238,6 +240,7 @@ export class DemoDataApi implements DataApi {
     const before = { ...rows[idx] };
     rows[idx] = { ...rows[idx], ...data } as Row;
     this.audit(`${entity}.updated`, entity, id, before, rows[idx]);
+    this.emitChange(entity, 'UPDATE', id);
     return rows[idx] as unknown as T;
   }
 
@@ -247,6 +250,21 @@ export class DemoDataApi implements DataApi {
     if (idx === -1) throw new DomainError('NOT_FOUND', `${entity} ${id} not found`);
     const [removed] = rows.splice(idx, 1);
     this.audit(`${entity}.deleted`, entity, id, removed, null);
+    this.emitChange(entity, 'DELETE', id);
+  }
+
+  /**
+   * Realtime mirror: emits on the in-process bus what the SQL path delivers
+   * through Supabase Realtime `postgres_changes` (same events, no network).
+   */
+  private emitChange(entity: EntityName, type: RealtimeEventType, id: string | null): void {
+    let tenantId: string | null = null;
+    try {
+      tenantId = this.scope();
+    } catch {
+      tenantId = null;
+    }
+    dataChangeBus.emit({ entity, type, id, tenantId });
   }
 
   private audit(
@@ -487,6 +505,7 @@ export class DemoDataApi implements DataApi {
     }
     this.notify('reservation.created', `Nouvelle réservation ${reference}`, `${customer?.full_name ?? ''} — ${nights} nuit(s)`);
     this.audit('reservation.created', 'reservations', reservation.id, null, reservation);
+    this.emitChange('reservations', 'INSERT', reservation.id);
     return reservation as unknown as Reservation;
   }
 
@@ -515,6 +534,7 @@ export class DemoDataApi implements DataApi {
       changed_by: this.currentUser().id, reason: reason ?? null, created_at: nowISO(),
     });
     this.audit('reservation.status_changed', 'reservations', id, { status: from }, { status: to });
+    this.emitChange('reservations', 'UPDATE', id);
     return res as unknown as Reservation;
   }
 
@@ -533,7 +553,9 @@ export class DemoDataApi implements DataApi {
         if (r.id === item.room_id) r.housekeeping_state = 'DIRTY';
         return r;
       });
+      this.emitChange('rooms', 'UPDATE', item.room_id as string | null);
     }
+    this.emitChange('checkins', 'INSERT', reservationId);
     this.notify('checkin.completed', `Check-in effectué (${res.reference})`, 'Le client est arrivé.');
   }
 
@@ -560,7 +582,9 @@ export class DemoDataApi implements DataApi {
     if (item) {
       const room = this.db.rooms.find((r) => r.id === item.room_id);
       if (room) room.housekeeping_state = 'DIRTY';
+      this.emitChange('rooms', 'UPDATE', item.room_id as string | null);
     }
+    this.emitChange('checkouts', 'INSERT', reservationId);
     this.notify('checkout.completed', `Check-out effectué (${res.reference})`, 'Chambre libérée — ménage à planifier.');
   }
 
@@ -589,6 +613,7 @@ export class DemoDataApi implements DataApi {
       changed_by: this.currentUser().id, created_at: nowISO(),
     });
     this.audit('room.housekeeping_state', 'rooms', roomId, { state: from }, { state: to });
+    this.emitChange('rooms', 'UPDATE', roomId);
   }
 
   async setRoomOperationalStatus(roomId: UUID, to: 'OPERATIONAL' | 'UNDER_MAINTENANCE'): Promise<void> {
@@ -604,6 +629,7 @@ export class DemoDataApi implements DataApi {
     }
     room.status = to;
     this.audit('room.status', 'rooms', roomId, { status: room.status }, { status: to });
+    this.emitChange('rooms', 'UPDATE', roomId);
   }
 
   /* ==================== FINANCE ==================== */
@@ -644,6 +670,7 @@ export class DemoDataApi implements DataApi {
       });
     }
     this.audit('invoice.created', 'invoices', invoice.id, null, invoice);
+    this.emitChange('invoices', 'INSERT', invoice.id);
     return invoice.id;
   }
 
@@ -659,6 +686,7 @@ export class DemoDataApi implements DataApi {
     inv.issued_at = nowISO();
     this.notify('invoice.issued', `Facture ${inv.number} émise`, `Montant : ${inv.total}`);
     this.audit('invoice.issued', 'invoices', invoiceId, { status: 'DRAFT' }, { status: 'ISSUED' });
+    this.emitChange('invoices', 'UPDATE', invoiceId);
   }
 
   async voidInvoice(invoiceId: UUID, reason: string): Promise<void> {
@@ -674,6 +702,7 @@ export class DemoDataApi implements DataApi {
     inv.voided_at = nowISO();
     this.notify('invoice.voided', `Facture ${inv.number} annulée`, reason);
     this.audit('invoice.voided', 'invoices', invoiceId, { status: inv.status }, { status: 'VOID', reason });
+    this.emitChange('invoices', 'UPDATE', invoiceId);
   }
 
   async recordPayment(input: RecordPaymentInput): Promise<Payment> {
@@ -712,6 +741,8 @@ export class DemoDataApi implements DataApi {
     }
     this.notify('payment.succeeded', `Paiement de ${input.amount} reçu`, input.method);
     this.audit('payment.created', 'payments', payment.id, null, payment);
+    this.emitChange('payments', 'INSERT', payment.id);
+    if (input.invoice_id) this.emitChange('invoices', 'UPDATE', input.invoice_id);
     return payment as unknown as Payment;
   }
 
@@ -804,13 +835,19 @@ export class DemoDataApi implements DataApi {
 
   async markNotificationRead(id: UUID): Promise<void> {
     const n = this.db.notifications.find((x) => x.id === id && x.tenant_id === this.scope());
-    if (n) n.read_at = nowISO();
+    if (n) {
+      n.read_at = nowISO();
+      this.emitChange('notifications', 'UPDATE', id);
+    }
   }
 
   async markAllNotificationsRead(): Promise<void> {
     this.db.notifications
       .filter((n) => n.tenant_id === this.scope() && !n.read_at)
-      .forEach((n) => (n.read_at = nowISO()));
+      .forEach((n) => {
+        n.read_at = nowISO();
+        this.emitChange('notifications', 'UPDATE', n.id);
+      });
   }
 
   /* ==================== SUBSCRIPTION ==================== */

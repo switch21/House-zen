@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   BedDouble, Building2, CalendarDays, ClipboardList, CreditCard, DoorOpen, DoorClosed,
   Gauge, Globe, Home, Hotel, LayoutDashboard, ListTree, LogOut, Menu,
@@ -10,7 +11,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/context';
 import { useI18n, LOCALES, LOCALE_LABELS, type Locale } from '@/lib/i18n/provider';
 import { can, type Permission } from '@/lib/permissions/rbac';
-import { isDemoMode } from '@/lib/api';
+import { getDataApi, isDemoMode } from '@/lib/api';
+import { useRealtimeSync } from '@/lib/realtime';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -132,11 +134,42 @@ function DemoBanner() {
   );
 }
 
+/**
+ * Notification bell with live unread count. The cache is invalidated by the
+ * realtime bus (useRealtimeSync below), so the badge updates without refresh
+ * when a notification row lands for this tenant.
+ */
+function NotificationBell({ label }: { label: string }) {
+  const { data } = useQuery({
+    queryKey: ['hz', 'notifications'],
+    queryFn: () => getDataApi().listMyNotifications(),
+    staleTime: 10_000,
+  });
+  const unread = (data ?? []).filter((n) => n.read_at === null).length;
+  return (
+    <NavLink
+      to="/app/notifications"
+      className="relative rounded-md p-2 hover:bg-accent"
+      aria-label={label}
+    >
+      <Bell size={16} />
+      {unread > 0 ? (
+        <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      ) : null}
+    </NavLink>
+  );
+}
+
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { session, signOut } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const tenantId = session?.tenant?.id ?? null;
+  // One tenant-scoped channel per tab: server changes invalidate query caches live.
+  useRealtimeSync(tenantId);
   const nav = buildNav();
 
   const sidebar = (
@@ -257,13 +290,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               </span>
             </div>
             <div className="flex items-center gap-1">
-              <NavLink
-                to="/app/notifications"
-                className="relative rounded-md p-2 hover:bg-accent"
-                aria-label={t('notifications.title')}
-              >
-                <Bell size={16} />
-              </NavLink>
+              <NotificationBell label={t('notifications.title')} />
               <LanguagePicker />
               <ThemeToggle />
             </div>
