@@ -1,36 +1,59 @@
+import { lazy, Suspense } from 'react';
 import { Route, Routes, Navigate, Link } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './guards';
 import { ROUTE_PERMISSIONS, type Permission } from '@/lib/permissions/rbac';
 import { useI18n } from '@/lib/i18n/provider';
 
-import LoginPage from '@/features/auth/LoginPage';
-import MfaChallengePage from '@/features/auth/MfaChallengePage';
-import DashboardPage from '@/features/dashboard/DashboardPage';
-import ReservationsPage from '@/features/reservations/ReservationsPage';
-import CalendarPage from '@/features/calendar/CalendarPage';
-import { CheckinsPage, CheckoutsPage } from '@/features/checkins/CheckinsPages';
-import CustomersPage from '@/features/customers/CustomersPage';
-import HousekeepingPage from '@/features/housekeeping/HousekeepingPage';
-import MaintenancePage from '@/features/maintenance/MaintenancePage';
-import ServicesPage from '@/features/services/ServicesPage';
-import RoomsPage from '@/features/rooms/RoomsPage';
-import PropertiesPage from '@/features/properties/PropertiesPage';
-import BuildingsPage from '@/features/buildings/BuildingsPage';
-import RoomTypesPage from '@/features/room-types/RoomTypesPage';
-import AmenitiesPage from '@/features/amenities/AmenitiesPage';
-import RatesPage from '@/features/rates/RatesPage';
-import InvoicesPage from '@/features/invoices/InvoicesPage';
-import PaymentsPage from '@/features/payments/PaymentsPage';
-import ExpensesPage from '@/features/expenses/ExpensesPage';
-import SuppliersPage from '@/features/suppliers/SuppliersPage';
-import ReportsPage from '@/features/reports/ReportsPage';
-import TeamPage from '@/features/team/TeamPage';
-import SettingsPage from '@/features/settings/SettingsPage';
-import SubscriptionPage from '@/features/subscriptions/SubscriptionPage';
-import NotificationsPage from '@/features/notifications/NotificationsPage';
-import AuditPage from '@/features/audit/AuditPage';
-import SuperAdminPage from '@/features/super-admin/SuperAdminPage';
-import PublicBookingPage from '@/features/public-booking/PublicBookingPage';
+// ---------------------------------------------------------------------------
+// Route-level code splitting — every page is a separate async chunk so the
+// app shell (index.js) stays small and role-specific pages are only fetched
+// by users who can actually reach them (perf budget, known-limitations §8).
+// Each page module keeps its default export.
+// ---------------------------------------------------------------------------
+const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
+const MfaChallengePage = lazy(() => import('@/features/auth/MfaChallengePage'));
+const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
+const ReservationsPage = lazy(() => import('@/features/reservations/ReservationsPage'));
+const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
+const CheckinsPage = lazy(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckinsPage })));
+const CheckoutsPage = lazy(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckoutsPage })));
+const CustomersPage = lazy(() => import('@/features/customers/CustomersPage'));
+const HousekeepingPage = lazy(() => import('@/features/housekeeping/HousekeepingPage'));
+const MaintenancePage = lazy(() => import('@/features/maintenance/MaintenancePage'));
+const ServicesPage = lazy(() => import('@/features/services/ServicesPage'));
+const RoomsPage = lazy(() => import('@/features/rooms/RoomsPage'));
+const PropertiesPage = lazy(() => import('@/features/properties/PropertiesPage'));
+const BuildingsPage = lazy(() => import('@/features/buildings/BuildingsPage'));
+const RoomTypesPage = lazy(() => import('@/features/room-types/RoomTypesPage'));
+const AmenitiesPage = lazy(() => import('@/features/amenities/AmenitiesPage'));
+const RatesPage = lazy(() => import('@/features/rates/RatesPage'));
+const InvoicesPage = lazy(() => import('@/features/invoices/InvoicesPage'));
+const PaymentsPage = lazy(() => import('@/features/payments/PaymentsPage'));
+const ExpensesPage = lazy(() => import('@/features/expenses/ExpensesPage'));
+const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage'));
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage'));
+const TeamPage = lazy(() => import('@/features/team/TeamPage'));
+const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
+const SubscriptionPage = lazy(() => import('@/features/subscriptions/SubscriptionPage'));
+const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage'));
+const AuditPage = lazy(() => import('@/features/audit/AuditPage'));
+const SuperAdminPage = lazy(() => import('@/features/super-admin/SuperAdminPage'));
+const PublicBookingPage = lazy(() => import('@/features/public-booking/PublicBookingPage'));
+
+/** Full-viewport loading placeholder shown while an async route chunk loads. */
+function PageLoader() {
+  return (
+    <div className="flex min-h-[60vh] w-full items-center justify-center" role="status" aria-busy="true">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/25 border-t-primary" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
+
+/** Wraps an async page in the shared Suspense boundary. */
+function suspense(element: React.ReactNode) {
+  return <Suspense fallback={<PageLoader />}>{element}</Suspense>;
+}
 
 function NotFound() {
   const { t } = useI18n();
@@ -52,11 +75,11 @@ function NotFound() {
 function guarded(path: string, element: React.ReactNode) {
   const permission: Permission | undefined = ROUTE_PERMISSIONS[path];
   if (!permission) {
-    return <Route key={path} path={path} element={element} />;
+    return <Route key={path} path={path} element={suspense(element)} />;
   }
   return (
     <Route key={path} element={<RequirePermission permission={permission} />}>
-      <Route path={path} element={element} />
+      <Route path={path} element={suspense(element)} />
     </Route>
   );
 }
@@ -66,9 +89,9 @@ export function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/mfa-challenge" element={<MfaChallengePage />} />
-      <Route path="/book/:propertySlug" element={<PublicBookingPage />} />
+      <Route path="/login" element={suspense(<LoginPage />)} />
+      <Route path="/mfa-challenge" element={suspense(<MfaChallengePage />)} />
+      <Route path="/book/:propertySlug" element={suspense(<PublicBookingPage />)} />
 
       {/* App (authenticated + RBAC-guarded) */}
       <Route element={<RequireAuth />}>
