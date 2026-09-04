@@ -22,6 +22,11 @@ export function getSupabaseClient(): SupabaseClient {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         flowType: 'pkce',
+        // NOTE: auth-js 2.115 uses an in-process lockless path — re-entrant
+        // auth calls (e.g. calling getSession() inside onAuthStateChange)
+        // deadlock silently on pendingInLock. That hazard is fixed at the
+        // call site (api.ts defers the callback via setTimeout) and AuthProvider
+        // adds a 10s bootstrap ceiling as a last resort.
       },
       global: { headers: { 'x-application-name': 'house-zen' } },
       db: { schema: 'public' },

@@ -87,8 +87,18 @@ export class SupabaseDataApi implements DataApi {
   }
 
   onAuthChange(cb: (session: never) => void): () => void {
-    const { data } = this.sb.auth.onAuthStateChange(async () => {
-      cb((await this.getSession()) as never);
+    // ⚠ Re-entrancy hazard (auth-js): auth events are emitted while the client
+    // holds its internal navigator lock. Calling getSession() — which itself
+    // calls auth.getUser()/mfa.getAuthenticatorAssuranceLevel() → acquireLock —
+    // from INSIDE the callback deadlocks (the emitter waits for the callback,
+    // the callback waits for the lock). Defer to a macrotask so the lock is
+    // guaranteed released before we re-enter the auth API.
+    const { data } = this.sb.auth.onAuthStateChange(() => {
+      setTimeout(() => {
+        this.getSession()
+          .then((s) => cb(s as never))
+          .catch((err) => console.error('[hz] onAuthChange getSession failed:', err?.message ?? err));
+      }, 0);
     });
     return () => data.subscription.unsubscribe();
   }

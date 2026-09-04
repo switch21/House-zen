@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { I18nProvider } from '@/lib/i18n/provider';
 import { AuthProvider } from '@/lib/auth/context';
 import { AppRoutes } from '@/app/router/routes';
+import { RootErrorBoundary } from '@/app/router/RootErrorBoundary';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,7 +21,11 @@ export function App() {
       <I18nProvider>
         <AuthProvider>
           <BrowserRouter>
-            <AppRoutes />
+            {/* Inner boundary: catches route render errors while keeping the
+                router context available to future fallback enhancements. */}
+            <RootErrorBoundary scope="router">
+              <AppRoutes />
+            </RootErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </I18nProvider>

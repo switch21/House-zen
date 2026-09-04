@@ -25,6 +25,34 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * getSession() with a hard ceiling. supabase-js coordinates token refreshes
+ * through the Web Locks API; an immediate page reload (e.g. after a
+ * stale-chunk recovery) can leave that lock pending, hanging auth calls with
+ * NO network request and NO rejection — an infinite spinner. Timing out and
+ * degrading to anonymous (→ redirect to /login) is strictly better.
+ */
+const SESSION_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(p: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('session bootstrap timed out')),
+      SESSION_TIMEOUT_MS,
+    );
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const api = useMemo(() => getDataApi(), []);
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -32,12 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    api.getSession().then((s) => {
-      if (mounted) {
-        setSession(s);
-        setLoading(false);
-      }
-    });
+    withTimeout(api.getSession())
+      .then((s) => {
+        if (mounted) {
+          setSession(s);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        // Never leave the app on an infinite spinner: degrade to anonymous.
+        console.error('[hz] session bootstrap failed:', err?.message ?? err);
+        if (mounted) {
+          setSession(null);
+          setLoading(false);
+        }
+      });
     const unsub = api.onAuthChange((s) => {
       if (mounted) setSession(s);
     });

@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import { lazyRetry } from './lazyRetry';
 import { Route, Routes, Navigate, Link } from 'react-router-dom';
 import { RequireAuth, RequirePermission } from './guards';
 import { ROUTE_PERMISSIONS, type Permission } from '@/lib/permissions/rbac';
@@ -9,36 +10,38 @@ import { useI18n } from '@/lib/i18n/provider';
 // app shell (index.js) stays small and role-specific pages are only fetched
 // by users who can actually reach them (perf budget, known-limitations §8).
 // Each page module keeps its default export.
+// lazyRetry() adds one auto-reload when a chunk 404s after a redeploy
+// (stale tab + immutable /assets caching) instead of crashing to white screen.
 // ---------------------------------------------------------------------------
-const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
-const MfaChallengePage = lazy(() => import('@/features/auth/MfaChallengePage'));
-const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
-const ReservationsPage = lazy(() => import('@/features/reservations/ReservationsPage'));
-const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'));
-const CheckinsPage = lazy(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckinsPage })));
-const CheckoutsPage = lazy(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckoutsPage })));
-const CustomersPage = lazy(() => import('@/features/customers/CustomersPage'));
-const HousekeepingPage = lazy(() => import('@/features/housekeeping/HousekeepingPage'));
-const MaintenancePage = lazy(() => import('@/features/maintenance/MaintenancePage'));
-const ServicesPage = lazy(() => import('@/features/services/ServicesPage'));
-const RoomsPage = lazy(() => import('@/features/rooms/RoomsPage'));
-const PropertiesPage = lazy(() => import('@/features/properties/PropertiesPage'));
-const BuildingsPage = lazy(() => import('@/features/buildings/BuildingsPage'));
-const RoomTypesPage = lazy(() => import('@/features/room-types/RoomTypesPage'));
-const AmenitiesPage = lazy(() => import('@/features/amenities/AmenitiesPage'));
-const RatesPage = lazy(() => import('@/features/rates/RatesPage'));
-const InvoicesPage = lazy(() => import('@/features/invoices/InvoicesPage'));
-const PaymentsPage = lazy(() => import('@/features/payments/PaymentsPage'));
-const ExpensesPage = lazy(() => import('@/features/expenses/ExpensesPage'));
-const SuppliersPage = lazy(() => import('@/features/suppliers/SuppliersPage'));
-const ReportsPage = lazy(() => import('@/features/reports/ReportsPage'));
-const TeamPage = lazy(() => import('@/features/team/TeamPage'));
-const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
-const SubscriptionPage = lazy(() => import('@/features/subscriptions/SubscriptionPage'));
-const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage'));
-const AuditPage = lazy(() => import('@/features/audit/AuditPage'));
-const SuperAdminPage = lazy(() => import('@/features/super-admin/SuperAdminPage'));
-const PublicBookingPage = lazy(() => import('@/features/public-booking/PublicBookingPage'));
+const LoginPage = lazyRetry(() => import('@/features/auth/LoginPage'));
+const MfaChallengePage = lazyRetry(() => import('@/features/auth/MfaChallengePage'));
+const DashboardPage = lazyRetry(() => import('@/features/dashboard/DashboardPage'));
+const ReservationsPage = lazyRetry(() => import('@/features/reservations/ReservationsPage'));
+const CalendarPage = lazyRetry(() => import('@/features/calendar/CalendarPage'));
+const CheckinsPage = lazyRetry(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckinsPage })));
+const CheckoutsPage = lazyRetry(() => import('@/features/checkins/CheckinsPages').then((m) => ({ default: m.CheckoutsPage })));
+const CustomersPage = lazyRetry(() => import('@/features/customers/CustomersPage'));
+const HousekeepingPage = lazyRetry(() => import('@/features/housekeeping/HousekeepingPage'));
+const MaintenancePage = lazyRetry(() => import('@/features/maintenance/MaintenancePage'));
+const ServicesPage = lazyRetry(() => import('@/features/services/ServicesPage'));
+const RoomsPage = lazyRetry(() => import('@/features/rooms/RoomsPage'));
+const PropertiesPage = lazyRetry(() => import('@/features/properties/PropertiesPage'));
+const BuildingsPage = lazyRetry(() => import('@/features/buildings/BuildingsPage'));
+const RoomTypesPage = lazyRetry(() => import('@/features/room-types/RoomTypesPage'));
+const AmenitiesPage = lazyRetry(() => import('@/features/amenities/AmenitiesPage'));
+const RatesPage = lazyRetry(() => import('@/features/rates/RatesPage'));
+const InvoicesPage = lazyRetry(() => import('@/features/invoices/InvoicesPage'));
+const PaymentsPage = lazyRetry(() => import('@/features/payments/PaymentsPage'));
+const ExpensesPage = lazyRetry(() => import('@/features/expenses/ExpensesPage'));
+const SuppliersPage = lazyRetry(() => import('@/features/suppliers/SuppliersPage'));
+const ReportsPage = lazyRetry(() => import('@/features/reports/ReportsPage'));
+const TeamPage = lazyRetry(() => import('@/features/team/TeamPage'));
+const SettingsPage = lazyRetry(() => import('@/features/settings/SettingsPage'));
+const SubscriptionPage = lazyRetry(() => import('@/features/subscriptions/SubscriptionPage'));
+const NotificationsPage = lazyRetry(() => import('@/features/notifications/NotificationsPage'));
+const AuditPage = lazyRetry(() => import('@/features/audit/AuditPage'));
+const SuperAdminPage = lazyRetry(() => import('@/features/super-admin/SuperAdminPage'));
+const PublicBookingPage = lazyRetry(() => import('@/features/public-booking/PublicBookingPage'));
 
 /** Full-viewport loading placeholder shown while an async route chunk loads. */
 function PageLoader() {
