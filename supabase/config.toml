@@ -1,0 +1,11 @@
+# Supabase CLI config — HOUSE-ZEN
+# Fonctions avec auth applicative propre (dual-auth API-key/JWT pour api-v1,
+# service-role/cron-secret pour notification-dispatcher) : la vérification JWT
+# de la plateforme est désactivée — le code effectue ses propres contrôles.
+project_id = "House-zen"
+
+[functions.api-v1]
+verify_jwt = false
+
+[functions.notification-dispatcher]
+verify_jwt = false
