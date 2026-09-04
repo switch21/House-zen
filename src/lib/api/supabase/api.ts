@@ -142,6 +142,15 @@ export class SupabaseDataApi implements DataApi {
     if (error) throw new Error(`${String(entity)}: ${error.message}`);
   }
 
+  /**
+   * PII read path (migration 052): plaintext ID documents ONLY via the audited
+   * RPC `hz_read_id_document` — RLS-protected, permission-checked
+   * (customers.read / reservations.read), every access written to audit_logs.
+   */
+  readIdDocument(entity: 'customers' | 'reservation_guests', id: UUID): Promise<string | null> {
+    return this.rpc<string | null>('hz_read_id_document', { p_entity: entity, p_id: id });
+  }
+
   /* ==================== AVAILABILITY & RESERVATIONS ==================== */
 
   searchAvailableRoomTypes(

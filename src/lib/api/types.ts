@@ -130,6 +130,15 @@ export interface DataApi {
   update<T extends Record<string, unknown>>(entity: EntityName, id: UUID, data: T): Promise<T>;
   remove(entity: EntityName, id: UUID): Promise<void>;
 
+  /**
+   * PII (migration 052): `id_document` is encrypted at rest — list/get rows
+   * carry ciphertext (`hzenc.v1:…`) in production. The ONLY way to a plaintext
+   * value is this audited read (SQL RPC `hz_read_id_document`, permission
+   * `customers.read` / `reservations.read`, every access written to audit_logs).
+   * Demo mirror: returns the in-memory stored value (documented simulation).
+   */
+  readIdDocument(entity: 'customers' | 'reservation_guests', id: UUID): Promise<string | null>;
+
   searchAvailableRoomTypes(
     propertyId: UUID, checkIn: string, checkOut: string, adults: number,
   ): Promise<AvailableRoomType[]>;

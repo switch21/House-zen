@@ -262,6 +262,23 @@ export class DemoDataApi implements DataApi {
   }
 
   /**
+   * PII read path (mirror of migration 052 `hz_read_id_document`): unknown id →
+   * null (no existence leak across tenants), known id → stored value. DEMO
+   * SIMULATION: values live in memory unencrypted; in production the SQL RPC
+   * decrypts at-rest ciphertext and writes pii.id_document.read to audit_logs
+   * before returning. Permission enforcement here stays with the same client
+   * guards as every other demo method (documented limitation of demo mode).
+   */
+  async readIdDocument(entity: 'customers' | 'reservation_guests', id: UUID): Promise<string | null> {
+    // Mirror SQL order: resolve the auth context FIRST (throws when signed
+    // out), then look the row up in the tenant scope.
+    const tenant = this.scope();
+    const row = this.table(entity).find((r) => r.id === id && r.tenant_id === tenant);
+    if (!row) return null;
+    return (row.id_document as string | undefined) ?? null;
+  }
+
+  /**
    * Realtime mirror: emits on the in-process bus what the SQL path delivers
    * through Supabase Realtime `postgres_changes` (same events, no network).
    */
