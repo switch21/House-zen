@@ -40,9 +40,32 @@ jobs:
       - name: Build
         run: npm run build
 
-      # E2E (Playwright) — install browsers on demand; blocking stage.
-      # - name: E2E
-      #   run: npx playwright install --with-deps chromium && npx playwright test
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (Playwright)
+        run: npm run test:e2e
+
+      - name: Upload trace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
 
   # NOTE: deploy stage targets Vercel (spec §22). Configure VERCEL_TOKEN secret.
   # A failing critical stage above blocks this job.

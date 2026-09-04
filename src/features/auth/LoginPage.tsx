@@ -47,8 +47,9 @@ export default function LoginPage() {
       await refresh();
       // AAL1 + verified factor → TOTP challenge before entering the app.
       navigate(session.pendingMfa ? '/mfa-challenge' : '/app/dashboard');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('auth.invalidCredentials'));
+    } catch {
+      // Generic localized message: never leak whether the email exists.
+      setError(t('auth.invalidCredentials'));
     }
   });
 

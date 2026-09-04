@@ -24,7 +24,7 @@ Légende : NOT_STARTED · IN_PROGRESS · BLOCKED · IMPLEMENTED · VERIFIED (ave
 | 18 | SaaS (plans, quotas, usage, feature flags, Super Admin) | **VERIFIED** (adaptateur+SQL) | page Subscription vérifiée (usage 2/3, 17/100) ; migrations 039-050 |
 | 19 | Tests (unit/intégration/concurrence/i18n) | **VERIFIED** | 35/35 Vitest ✓ |
 | 20 | CI/CD | **IMPLEMENTED** | workflow GitHub Actions (lint→typecheck→test→security→build) |
-| 21 | E2E Playwright | NOT_STARTED | configs non livrées (voir known-limitations) |
+| 21 | E2E Playwright | **VERIFIED** | 8/8 scénarios Chromium ✓ (18.6 s) : auth+RBAC (owner, menage→403, logout), booking public E2E complet, création réservation back-office (HZ-2026-0011) ; job CI dédié `e2e` |
 | 22 | MFA Super Admin | **IMPLEMENTED** | flux complet : enrôlement TOTP (QR + clé), challenge /mfa-challenge, garde RequireAuth AAL1→AAL2, gestion dans Settings→Sécurité ; prod = Supabase Auth MFA (mfa.ts), démo = simulation documentée ; 6 tests ✓ |
 | 23 | Realtime multi-tenant | **VERIFIED** (client) | canal tenant Supabase Realtime (`tenant_id=eq.`) + bus d'événements + invalidation TanStack Query ; badge notifications live ; miroir démo émetteur ; 12 tests ✓ |
 | 24 | Backup/restore testé | DOCUMENTÉ | runbook livré ; exécution à la charge de l'exploitant Supabase |
