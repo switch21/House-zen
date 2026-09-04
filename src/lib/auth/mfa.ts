@@ -166,14 +166,17 @@ class SupabaseMfaApi implements MfaApi {
       friendlyName: email,
     });
     if (error) throw new Error(error.message);
-    const qrDataUrl = data.totp?.qr_code
-      ? `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(data.totp.qr_code)))}`
+    // Narrow the enroll() union (totp | phone) — House-zen only supports TOTP.
+    if (data.type !== 'totp') throw new Error('MFA: unexpected factor type');
+    const totp = data.totp;
+    const qrDataUrl = totp?.qr_code
+      ? `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(totp.qr_code)))}`
       : undefined;
     return {
       factorId: data.id,
       qrDataUrl,
-      secret: data.totp?.secret,
-      otpauthUrl: data.totp?.uri,
+      secret: totp?.secret,
+      otpauthUrl: totp?.uri,
     };
   }
 

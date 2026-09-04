@@ -93,8 +93,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label={t('dashboard.arrivalsToday')} value={String(k.arrivalsToday.length)} icon={<CalendarCheck size={16} />} />
-        <StatCard label={t('dashboard.departuresToday')} value={String(k.departuresToday.length)} icon={<CalendarX2 size={16} />} />
+        <StatCard label={t('dashboard.arrivalsToday')} value={String(k.arrivalsToday?.length ?? 0)} icon={<CalendarCheck size={16} />} />
+        <StatCard label={t('dashboard.departuresToday')} value={String(k.departuresToday?.length ?? 0)} icon={<CalendarX2 size={16} />} />
         <StatCard label={t('dashboard.dirtyRooms')} value={String(k.dirtyRooms)} icon={<Sparkles size={16} />} tone={k.dirtyRooms > 3 ? 'warning' : 'default'} />
         <StatCard label={t('dashboard.openTickets')} value={String(k.openTickets)} icon={<Wrench size={16} />} tone={k.openTickets > 0 ? 'warning' : 'default'} />
       </div>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={k.revenueSeries}>
+                <BarChart data={k.revenueSeries ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
                   <YAxis tick={{ fontSize: 10 }} width={60} />
@@ -127,7 +127,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={k.occupancySeries}>
+                <LineChart data={k.occupancySeries ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
                   <YAxis tick={{ fontSize: 10 }} width={40} unit="%" domain={[0, 100]} />
@@ -156,7 +156,7 @@ export default function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {k.recentReservations.map((r) => (
+              {(k.recentReservations ?? []).map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-xs">{r.reference}</TableCell>
                   <TableCell>{formatDate(r.check_in_date, locale)}</TableCell>
