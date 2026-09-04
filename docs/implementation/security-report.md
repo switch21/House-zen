@@ -33,5 +33,33 @@ même transaction. Aucune lecture directe de table pour anon (policy explicite f
 
 ## Secrets & PII
 `.env` git-ignoré ; `.env.example` documente les variables publiques ;
-aucun mot de passe/token/clé dans les logs ; `id_document` stocké tel quel
-(recommandation : chiffrement applicatif avant GO production, voir limitations).
+aucun mot de passe/token/clé dans les logs.
+
+**Chiffrement PII — LIVRÉ (migration 052)** : `id_document` (tables `customers`
+et `reservation_guests`) est chiffré au repos par triggers BEFORE (pgcrypto
+`pgp_sym_encrypt` AES-256, préfixe `hzenc.v1:` idempotent), backfill inclus.
+- Clé : jamais en dur — GUC transaction-local `hz.pii_key` ou secret Vault
+  Supabase `hz_pii_key` ; résolution fail-closed (`hz_pii_key()` lève si absente,
+  aucune clé dérivée/inventée).
+- Fonctions internes (`hz_pii_key`, `hz_encrypt_pii`, `hz_decrypt_pii`) :
+  execute révoqué à public/anon/authenticated/service_role (défense contre les
+  default privileges Supabase) — appelables uniquement depuis le code
+  SECURITY DEFINER.
+- Lecture en clair : uniquement la RPC `hz_read_id_document(entity, id)`
+  (allowlist d'entités, permission `customers.read`/`reservations.read`
+  résolue pour JWT et contexte machine `hz.api_role`, `select *` ne retourne
+  jamais du clair) ; chaque succès écrit `pii.id_document.read` dans
+  audit_logs ; chaque refus lève 42501 (visible dans les logs PostgreSQL —
+  un INSERT d'audit suivi d'un RAISE serait annulé par le rollback, choix
+  documenté).
+- Miroir démo : simulation documentée (données en mémoire, garde d'authentification
+  identique), contrat `DataApi.readIdDocument` testé (4 specs).
+
+## Durcissements livraison (itération hardening)
+- Supabase default privileges neutralisés pour les nouvelles fonctions
+  sensibles (revoke explicites anon/authenticated/service_role).
+- Edge Function `notification-dispatcher` : file sortante fail-closed — sans
+  provider configuré, un envoi est impossible (PROVIDER_NOT_CONFIGURED →
+  retry → DEAD_LETTER) ; surface HTTP service-role/CRON uniquement ;
+  garantie at-least-once documentée (lease 5 min, SKIP LOCKED, updates
+  gardés `WHERE status='QUEUED'`).

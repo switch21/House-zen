@@ -5,19 +5,30 @@
    du serveur. En production (env configurées), ce code est inactif.
 2. **MFA Super Admin** : supporté par Supabase Auth mais non activé par défaut —
    à activer dans Auth → Policies avant mise en production (spécification §31/§41).
-3. **Notifications sortantes** : tables + machine d'états + retry/dead-letter prêts ;
-   connecteurs EMAIL/SMS/WHATSAPP à brancher sur les providers (Edge Functions).
+3. **Notifications sortantes** : tables + machine d'états + retry/dead-letter +
+   **Edge Function `notification-dispatcher` livrée** (Resend/Twilio, lease
+   SKIP LOCKED, backoff, DLQ, fail-closed sans provider). Reste à l'exploitant :
+   déployer la fonction, créer le cron, renseigner les secrets providers
+   (deployment-runbook §DLQ).
 4. **Webhooks paiement** : table anti-replay + structure prêtes ; vérification de
    signature à implémenter dans l'Edge Function du provider choisi (Mobile Money…).
-5. **REST API v1** : schéma (api_keys hashées, scopes, idempotency) + conventions +
-   OpenAPI livrés ; le serving Edge Function reste à déployer.
-6. **E2E Playwright** : parcours critiques vérifiés manuellement via agent-browser ;
-   la suite automatisée est à ajouter (config + specs).
-7. **Traductions es/de/ar/it/sw** : noyau couvert (>80 % des clés critiques, testé),
+5. **REST API v1** : schéma (api_keys hashées, scopes, idempotency) + conventions
+   + OpenAPI + Edge Function `api-v1` (dual auth, rate limit, webhooks HMAC)
+   livrés ; déploiement réel à faire au provisionnement du projet Supabase.
+6. **Traductions es/de/ar/it/sw** : noyau couvert (>80 % des clés critiques, testé),
    fallback fr pour le reste ; complétion à planifier.
-8. **Performance** : bundle 1 241 kB (gzip 348 kB) — code-splitting recommandé ;
-   benchmarks de charge (100k réservations) à exécuter en staging.
-9. **Chiffrement PII** : `id_document` stocké en clair en base (RLS en barrière) ;
-   recommandé : chiffrement applicatif avant GO si exigence de conformité stricte.
-10. **Realtime client** : souscriptions Supabase Realtime à intégrer côté UI
-    (policies RLS déjà couvrantes pour l'isolation).
+7. **Performance** : code-splitting par route livré (shell 115 kB gzip 33 kB,
+   29 chunks de pages 1–11 kB, charts isolés 308 kB chargés uniquement par
+   Dashboard/Reports) ; benchmarks de charge (100k réservations) à exécuter en
+   staging.
+8. **Chiffrement PII** : **livré (migration 052)** — `id_document` chiffré au
+   repos (pgcrypto AES-256), lecture uniquement via RPC auditée
+   `hz_read_id_document` (RBAC + audit_logs). Reste à l'exploitant : créer la
+   clé (`hz_pii_key` Vault ou GUC) AVANT d'appliquer la 052 sur des données
+   existantes (runbook §PII) et activer la rotation documentée.
+9. **E2E Playwright** : suite automatisée livrée (8 scénarios : auth/RBAC,
+   booking public, réservation back-office) ; le parcours de vérification
+   manuelle agent-browser reste documenté dans implementation-status.
+10. **Realtime client** : intégration livrée (canal tenant + invalidation de
+    requêtes + badge live) ; réplication Supabase Realtime à activer par
+    l'exploitant sur les tables ops (runbook post-déploiement).

@@ -45,3 +45,42 @@ sur Vercel via VERCEL_TOKEN).
 3. RLS : requête SQL anon sur une table métier → 0 ligne.
 4. Audit : chaque action sensible apparaît dans /app/audit.
 5. Realtime : activer la réplication Supabase Realtime sur les tables ops si utilisée.
+
+## PII — clé de chiffrement (migration 052)
+`id_document` (customers, reservation_guests) est chiffré au repos (pgcrypto
+AES-256, préfixe `hzenc.v1:`). Le déchiffrement ne passe QUE par la RPC auditée
+`hz_read_id_document` (permissions `customers.read` / `reservations.read`,
+chaque accès écrit `pii.id_document.read` dans audit_logs ; les refus lèvent
+42501 et se retrouvent dans les logs PostgreSQL).
+
+- **AVANT d'appliquer la 052 sur des données existantes** : créer le secret.
+  - Option Supabase recommandée : Vault → secret nommé `hz_pii_key`
+    (`select vault.create_secret('<clé-aléatoire-32+ octets>', 'hz_pii_key');`).
+  - Option GUC : `SET LOCAL hz.pii_key = '<clé>'` dans chaque transaction
+    entrante (même pattern que `hz.tenant_id`, migration 051).
+  - Sans clé, la migration s'applique mais le backfill est SKIPPÉ avec un
+    WARNING (installations fraîches : aucune ligne à convertir) et
+    `hz_encrypt_pii` échoue fermé (aucune clé inventée).
+- Génération de clé : `openssl rand -base64 32`.
+- Rotation : lire la valeur legacy, `UPDATE` la ligne — le trigger re-chiffre
+  avec la clé courante ; procédure par lots hors heures pleines.
+- Vérification : `select hz_read_id_document('customers', '<uuid>')` sous un
+  rôle autorisé → valeur lisible + ligne `pii.id_document.read` dans audit_logs ;
+  `select id_document from customers` → préfixe `hzenc.v1:` uniquement.
+
+## DLQ — notifications sortantes (dispatcher)
+- Déployer : `supabase functions deploy notification-dispatcher` puis créer un
+  cron Supabase (pg_cron / Scheduler) qui POSTe sur
+  `/functions/v1/notification-dispatcher` avec
+  `Authorization: Bearer <DISPATCHER_CRON_SECRET>` toutes les 1–5 minutes.
+- Secrets : `SUPABASE_DB_URL` ; providers : `RESEND_API_KEY`+`MAIL_FROM`
+  (EMAIL), `TWILIO_ACCOUNT_SID`+`TWILIO_AUTH_TOKEN`+`TWILIO_SMS_FROM`/
+  `TWILIO_WHATSAPP_FROM` (SMS/WhatsApp). Sans provider configuré, la file
+  échoue FERMÉE (PROVIDER_NOT_CONFIGURED → retry → DLQ) — jamais d'envoi simulé
+  en production. Staging uniquement : `DISPATCHER_LOG_ONLY=1`.
+- Garanties : at-least-once (lease 5 min, SKIP LOCKED) ; backoff exponentiel
+  plafonné à 60 min ; DEAD_LETTER après 5 tentatives ; balayage janitor des
+  tentatives finales interrompues par crash.
+- Supervision : `select count(*) from notification_deliveries where
+  status='DEAD_LETTER'` → alerte si > 0 ; inspection des causes dans
+  `errors` retournés par le dispatcher et les logs Edge.
