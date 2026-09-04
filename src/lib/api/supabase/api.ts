@@ -65,6 +65,15 @@ export class SupabaseDataApi implements DataApi {
         .maybeSingle<AnyRow>();
       tenant = (t as unknown as Tenant) ?? null;
     }
+    // AAL: a user owning a verified factor but sitting at AAL1 must complete
+    // a TOTP challenge before reaching the app (Supabase Auth MFA).
+    let pendingMfa = false;
+    try {
+      const { data: aal } = await this.sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      pendingMfa = aal?.currentLevel !== 'aal2' && aal?.nextLevel === 'aal2';
+    } catch {
+      pendingMfa = false;
+    }
     return {
       userId: user.id,
       email: user.email ?? '',
@@ -73,6 +82,7 @@ export class SupabaseDataApi implements DataApi {
       isSuperAdmin: Boolean(profile?.is_super_admin),
       tenant,
       memberships: (memberships ?? []) as { tenant_id: UUID; role: never }[],
+      pendingMfa,
     };
   }
 

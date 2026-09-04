@@ -43,9 +43,10 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     try {
-      await getDataApi().signIn(values.email, values.password);
+      const session = await getDataApi().signIn(values.email, values.password);
       await refresh();
-      navigate('/app/dashboard');
+      // AAL1 + verified factor → TOTP challenge before entering the app.
+      navigate(session.pendingMfa ? '/mfa-challenge' : '/app/dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : t('auth.invalidCredentials'));
     }

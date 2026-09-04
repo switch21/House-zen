@@ -25,8 +25,8 @@ Légende : NOT_STARTED · IN_PROGRESS · BLOCKED · IMPLEMENTED · VERIFIED (ave
 | 19 | Tests (unit/intégration/concurrence/i18n) | **VERIFIED** | 35/35 Vitest ✓ |
 | 20 | CI/CD | **IMPLEMENTED** | workflow GitHub Actions (lint→typecheck→test→security→build) |
 | 21 | E2E Playwright | NOT_STARTED | configs non livrées (voir known-limitations) |
-| 22 | MFA Super Admin | NOT_STARTED | Supabase Auth MFA à activer côté projet (voir limitations) |
-| 23 | Realtime multi-tenant | PARTIEL | RLS Supabase couvre le Realtime via la même policy ; souscriptions client à ajouter |
+| 22 | MFA Super Admin | **IMPLEMENTED** | flux complet : enrôlement TOTP (QR + clé), challenge /mfa-challenge, garde RequireAuth AAL1→AAL2, gestion dans Settings→Sécurité ; prod = Supabase Auth MFA (mfa.ts), démo = simulation documentée ; 6 tests ✓ |
+| 23 | Realtime multi-tenant | **VERIFIED** (client) | canal tenant Supabase Realtime (`tenant_id=eq.`) + bus d'événements + invalidation TanStack Query ; badge notifications live ; miroir démo émetteur ; 12 tests ✓ |
 | 24 | Backup/restore testé | DOCUMENTÉ | runbook livré ; exécution à la charge de l'exploitant Supabase |
 
 ## Preuves de la vérification navigateur (agent-browser, session propre)

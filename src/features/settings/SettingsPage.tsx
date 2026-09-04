@@ -7,6 +7,7 @@ import { Input, Label } from '@/components/ui/input';
 import { PageHeader } from '@/components/layout/shared';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { MfaSettings } from './MfaSettings';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuth } from '@/lib/auth/context';
 import { useEntityList, useEntityMutations } from '@/hooks/useEntity';
@@ -53,6 +54,7 @@ export default function SettingsPage() {
           <TabsTrigger value="general">{t('settings.general')}</TabsTrigger>
           <TabsTrigger value="taxes">{t('settings.taxes')}</TabsTrigger>
           <TabsTrigger value="policies">{t('settings.policies')}</TabsTrigger>
+          <TabsTrigger value="security">{t('settings.security')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -83,6 +85,10 @@ export default function SettingsPage() {
               ) : null}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <MfaSettings />
         </TabsContent>
 
         <TabsContent value="taxes">

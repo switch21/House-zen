@@ -4,7 +4,9 @@ import { can, ROUTE_PERMISSIONS, type Permission } from '@/lib/permissions/rbac'
 import { AppLayout } from '@/app/layouts/AppLayout';
 import type { ReactNode } from 'react';
 
-/** Blocks until session resolution completes; redirects to /login when anonymous. */
+/** Blocks until session resolution completes; redirects to /login when anonymous.
+ *  Redirects to /mfa-challenge when a verified factor exists but the session
+ *  is still at AAL1 (MFA pending). */
 export function RequireAuth({ children }: { children?: ReactNode }) {
   const { session, loading } = useAuth();
   const location = useLocation();
@@ -16,6 +18,9 @@ export function RequireAuth({ children }: { children?: ReactNode }) {
     );
   }
   if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (session.pendingMfa) {
+    return <Navigate to="/mfa-challenge" replace state={{ from: location.pathname }} />;
+  }
   return <AppLayout>{children ?? <Outlet />}</AppLayout>;
 }
 

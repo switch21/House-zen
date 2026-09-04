@@ -4,6 +4,7 @@ import { ROUTE_PERMISSIONS, type Permission } from '@/lib/permissions/rbac';
 import { useI18n } from '@/lib/i18n/provider';
 
 import LoginPage from '@/features/auth/LoginPage';
+import MfaChallengePage from '@/features/auth/MfaChallengePage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
 import ReservationsPage from '@/features/reservations/ReservationsPage';
 import CalendarPage from '@/features/calendar/CalendarPage';
@@ -66,6 +67,7 @@ export function AppRoutes() {
       {/* Public */}
       <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/mfa-challenge" element={<MfaChallengePage />} />
       <Route path="/book/:propertySlug" element={<PublicBookingPage />} />
 
       {/* App (authenticated + RBAC-guarded) */}

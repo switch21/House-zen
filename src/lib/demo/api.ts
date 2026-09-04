@@ -31,6 +31,7 @@ import type {
   RecordPaymentInput,
 } from '@/lib/api/types';
 import { dataChangeBus, type RealtimeEventType } from '@/lib/realtime/bus';
+import { demoMfaStore } from '@/lib/demo/mfa-store';
 import { buildSeed, DEMO_TENANT_ID, type DemoDB, type DemoUser, type Row } from './store';
 import {
   addMoney,
@@ -135,6 +136,12 @@ export class DemoDataApi implements DataApi {
     const tenantRow = user.tenant_id
       ? this.db.tenants.find((t) => t.id === user.tenant_id)
       : null;
+    // MFA mirror: pending when a verified factor exists but the session has
+    // not passed a challenge yet (AAL1 < AAL2 in the production path).
+    const verifiedFactors = user.is_super_admin || user.tenant_id
+      ? demoMfaStore.verifiedFactors(user.id)
+      : [];
+    const pendingMfa = verifiedFactors.length > 0 && !demoMfaStore.sessionIsAal2();
     return {
       userId: user.id,
       email: user.email,
@@ -143,6 +150,7 @@ export class DemoDataApi implements DataApi {
       isSuperAdmin: user.is_super_admin,
       tenant: (tenantRow as unknown as AuthSession['tenant']) ?? null,
       memberships: user.tenant_id ? [{ tenant_id: user.tenant_id, role: user.role }] : [],
+      pendingMfa,
     };
   }
 

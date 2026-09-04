@@ -53,6 +53,12 @@ export interface AuthSession {
   isSuperAdmin: boolean;
   tenant: Tenant | null;
   memberships: { tenant_id: UUID; role: UserRole }[];
+  /**
+   * True when the user owns a verified MFA factor but the current session is
+   * still at AAL1 (multi-factor required before entering the app).
+   * Production: derived from Supabase Auth AAL levels; demo: documented mirror.
+   */
+  pendingMfa?: boolean;
 }
 
 export interface KPIs {
