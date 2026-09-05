@@ -60,20 +60,27 @@ describe('MFA (TOTP) demo flow', () => {
     expect(factors[0]!.status).toBe('verified');
   });
 
-  it('a verified factor makes the session pending MFA (AAL1) until challenge', async () => {
+  it('a verified factor makes a FRESH session pending MFA (AAL1) until challenge', async () => {
     const enrollment = await getMfaApi().enroll('owner@demo.house-zen.app');
     await getMfaApi().verifyEnrollment(
       enrollment.factorId,
       demoTotpCode(enrollment.secret!),
     );
-    const session = await api.getSession();
-    expect(session?.pendingMfa).toBe(true);
+    // Prod parity: the enrollment confirmation itself returns an AAL2 session —
+    // pendingMfa only applies to the NEXT login (fresh AAL1 session).
+    expect((await api.getSession())?.pendingMfa).toBe(false);
+    expect((await getMfaApi().aal()).current).toBe('aal2');
+    demoMfaStore.clearSessionAal2(); // simulate the next login
+    const fresh = await api.getSession();
+    expect(fresh?.pendingMfa).toBe(true);
   });
 
   it('challenge verify upgrades to AAL2 and clears pendingMfa', async () => {
     const mfa = getMfaApi();
     const enrollment = await mfa.enroll('owner@demo.house-zen.app');
     await mfa.verifyEnrollment(enrollment.factorId, demoTotpCode(enrollment.secret!));
+    demoMfaStore.clearSessionAal2(); // simulate a fresh AAL1 login session
+    expect((await mfa.aal()).current).toBe('aal1');
     const challengeId = await mfa.createChallenge(enrollment.factorId);
     const right = demoTotpCode(enrollment.secret!);
     const wrong = right === '123456' ? '123457' : '123456';

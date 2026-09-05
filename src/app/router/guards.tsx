@@ -1,9 +1,14 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth/context';
 import { can, type Permission } from '@/lib/permissions/rbac';
 import { AppLayout } from '@/app/layouts/AppLayout';
+import { getMfaApi } from '@/lib/auth/mfa';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { ReactNode } from 'react';
+
+/** Lazy — keeps the gate (and MFA enrollment UI) out of the main bundle. */
+const AdminMfaGate = lazy(() => import('@/features/super-admin/AdminMfaGate'));
 
 /** Blocks until session resolution completes; redirects to /login when anonymous.
  *  Redirects to /mfa-challenge when a verified factor exists but the session
@@ -54,11 +59,35 @@ export function RequirePermission({ permission }: { permission: Permission }) {
 
 /** Platform back-office gate: profiles.is_super_admin only (migration 059).
  *  Stricter than RequirePermission — membership roles never unlock /admin,
- *  even 'owner': the SQL RPCs reject them anyway, the UI must not tease. */
+ *  even 'owner': the SQL RPCs reject them anyway, the UI must not tease.
+ *  Migration 060: the SQL layer additionally requires an AAL2 session — this
+ *  gate mirrors it client-side by routing non-AAL2 operators to the inline
+ *  MFA enrollment screen instead of letting every RPC fail. */
 export function RequireSuperAdmin() {
   const { session } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
+  const [aal, setAal] = useState<'loading' | 'ok' | 'gate'>('loading');
+  const userId = session?.userId;
+  const pendingMfa = session?.pendingMfa;
+
+  useEffect(() => {
+    if (!userId) return;
+    let on = true;
+    setAal('loading');
+    getMfaApi()
+      .aal()
+      .then((r) => {
+        if (on) setAal(r.current === 'aal2' ? 'ok' : 'gate');
+      })
+      .catch(() => {
+        if (on) setAal('gate');
+      });
+    return () => {
+      on = false;
+    };
+  }, [userId, pendingMfa]);
+
   if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (session.pendingMfa) {
     return <Navigate to="/mfa-challenge" replace state={{ from: location.pathname }} />;
@@ -69,6 +98,26 @@ export function RequireSuperAdmin() {
         <p className="text-lg font-semibold">403</p>
         <p className="text-sm text-muted-foreground">{t('errors.forbidden')}</p>
       </div>
+    );
+  }
+  if (aal === 'loading') {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label={t('common.loading')} />
+      </div>
+    );
+  }
+  if (aal === 'gate') {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex min-h-[40vh] items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        }
+      >
+        <AdminMfaGate onSatisfied={() => setAal('ok')} />
+      </Suspense>
     );
   }
   return <Outlet />;

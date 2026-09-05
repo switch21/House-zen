@@ -107,6 +107,9 @@ class DemoMfaApi implements MfaApi {
     const expected = demoTotpCode(factor.secret);
     if (code.trim() !== expected) return false;
     demoMfaStore.upsert({ ...factor, status: 'verified' });
+    // Prod parity: confirming enrollment returns an upgraded AAL2 session —
+    // the operator is NOT redirected to the challenge page right after.
+    demoMfaStore.markSessionAal2();
     return true;
   }
 

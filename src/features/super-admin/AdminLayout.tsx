@@ -6,7 +6,7 @@
  */
 
 import { NavLink, Outlet } from 'react-router-dom';
-import { Building2, LayoutDashboard, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { Building2, LayoutDashboard, Lock, ShieldCheck, Users, Wallet } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/provider';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,7 @@ const LINKS = [
   { to: '/admin/tenants', labelKey: 'nav.adminTenants', icon: Building2 },
   { to: '/admin/users', labelKey: 'admin.users', icon: Users },
   { to: '/admin/plans', labelKey: 'nav.adminPlans', icon: Wallet },
+  { to: '/admin/security', labelKey: 'admin.mfaGate.navSecurity', icon: Lock },
 ] as const;
 
 export default function AdminLayout() {

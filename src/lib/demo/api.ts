@@ -127,6 +127,9 @@ export class DemoDataApi implements DataApi {
     } catch {
       /* non-critical */
     }
+    // Session ended — the AAL2 upgrade (TOTP challenge) must be re-earned at
+    // the next sign-in, exactly like a fresh Supabase session.
+    demoMfaStore.clearSessionAal2();
     this.listeners.forEach((l) => l(null));
   }
 

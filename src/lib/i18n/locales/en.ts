@@ -475,6 +475,12 @@ const en: Record<string, string> = {
   'invoices.itemUnit': "Unit price",
   'invoices.itemTotal': "Total",
   'invoices.printFooter': "Thank you for your loyalty",
+  'admin.mfaGate.title': "Two-step verification required",
+  'admin.mfaGate.subtitle': "Platform back-office security gate",
+  'admin.mfaGate.explanation': "Admin functions require a session verified by two-factor authentication (TOTP). Enable it below — it will then be requested at every sign-in.",
+  'admin.mfaGate.navSecurity': "Security",
+  'admin.mfaGate.securityTitle': "Account security",
+  'admin.mfaGate.securitySubtitle': "Two-factor authentication (TOTP) — factor management",
 };
 
 export default en;

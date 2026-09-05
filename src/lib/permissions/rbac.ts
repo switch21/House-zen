@@ -120,4 +120,5 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   '/admin/tenants': 'admin.tenants',
   '/admin/users': 'admin.users',
   '/admin/plans': 'admin.plans',
+  '/admin/security': 'settings.write',
 };

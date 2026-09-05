@@ -47,6 +47,7 @@ const AdminDashboardPage = lazyRetry(() => import('@/features/super-admin/AdminD
 const AdminTenantsPage = lazyRetry(() => import('@/features/super-admin/AdminTenantsPage'));
 const AdminUsersPage = lazyRetry(() => import('@/features/super-admin/AdminUsersPage'));
 const AdminPlansPage = lazyRetry(() => import('@/features/super-admin/AdminPlansPage'));
+const AdminSecurityPage = lazyRetry(() => import('@/features/super-admin/AdminSecurityPage'));
 const PublicBookingPage = lazyRetry(() => import('@/features/public-booking/PublicBookingPage'));
 
 /** Full-viewport loading placeholder shown while an async route chunk loads. */
@@ -154,6 +155,7 @@ export function AppRoutes() {
             <Route path="tenants" element={suspense(<AdminTenantsPage />)} />
             <Route path="users" element={suspense(<AdminUsersPage />)} />
             <Route path="plans" element={suspense(<AdminPlansPage />)} />
+            <Route path="security" element={suspense(<AdminSecurityPage />)} />
             <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
           </Route>
         </Route>

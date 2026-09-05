@@ -475,6 +475,12 @@ const fr: Record<string, string> = {
   'invoices.itemUnit': "Prix unitaire",
   'invoices.itemTotal': "Total",
   'invoices.printFooter': "Merci de votre fidélité",
+  'admin.mfaGate.title': "Vérification en deux étapes requise",
+  'admin.mfaGate.subtitle': "Sécurité renforcée du back-office plateforme",
+  'admin.mfaGate.explanation': "L'accès aux fonctions d'administration exige une session vérifiée par double authentification (TOTP). Activez la double authentification ci-dessous — elle sera ensuite demandée à chaque connexion.",
+  'admin.mfaGate.navSecurity': "Sécurité",
+  'admin.mfaGate.securityTitle': "Sécurité du compte",
+  'admin.mfaGate.securitySubtitle': "Double authentification (TOTP) — gestion des facteurs",
 };
 
 export default fr;
