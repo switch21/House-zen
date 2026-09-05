@@ -86,6 +86,10 @@ export function canAny(role: UserRole, permissions: Permission[]): boolean {
   return permissions.some((p) => can(role, p));
 }
 
+/** Route → permission map consumed by the router's guarded() helper.
+ *  Dynamic segments are registered as ':id' templates. Deliberately absent:
+ *  '/app/dashboard' and '/app/notifications' — open to every authenticated
+ *  role by design (landing + notification bell must work for all 7 roles). */
 export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   '/app/properties': 'properties.read',
   '/app/buildings': 'buildings.read',

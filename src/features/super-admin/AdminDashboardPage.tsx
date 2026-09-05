@@ -22,22 +22,23 @@ export default function AdminDashboardPage() {
   const { t, locale } = useTranslation();
   const qc = useQueryClient();
 
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: () => getDataApi().adminStats(),
   });
-  const { data: tenants } = useQuery({
+  const { data: tenants, isError: tenantsError } = useQuery({
     queryKey: ['admin', 'tenants-overview'],
     queryFn: () => getDataApi().adminTenantsOverview(),
   });
-  const { data: users } = useQuery({
+  const { data: users, isError: usersError } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: () => getDataApi().adminListUsers(),
   });
-  const { data: flags } = useQuery({
+  const { data: flags, isError: flagsError } = useQuery({
     queryKey: ['admin', 'flags'],
     queryFn: () => getDataApi().adminListFeatureFlags(),
   });
+  const anyError = statsError || tenantsError || usersError || flagsError;
 
   const toggleFlag = useMutation({
     mutationFn: (id: string) => getDataApi().adminToggleFeatureFlag(id),
@@ -55,6 +56,18 @@ export default function AdminDashboardPage() {
         description={`${t('admin.subtitle')} · ${isDemoMode() ? t('common.demoTitle') : 'PROD'}`}
         actions={<ShieldCheck size={20} className="text-primary" />}
       />
+
+      {anyError ? (
+        <Card>
+          <CardContent className="py-6 text-center text-sm text-destructive">{t('common.error')}</CardContent>
+        </Card>
+      ) : null}
+
+      {statsLoading ? (
+        <div className="flex justify-center py-10">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label={t('common.loading')} />
+        </div>
+      ) : null}
 
       {s ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -185,6 +198,9 @@ export default function AdminDashboardPage() {
                 <Switch checked={f.enabled} onCheckedChange={() => toggleFlag.mutate(f.id)} />
               </li>
             ))}
+            {(flags ?? []).length === 0 ? (
+              <li className="rounded-md border px-3 py-2 text-sm text-muted-foreground">—</li>
+            ) : null}
           </ul>
         </CardContent>
       </Card>

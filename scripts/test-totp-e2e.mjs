@@ -1,11 +1,22 @@
 /**
  * HOUSE-ZEN — preuve E2E que le TOTP est fonctionnel ET branché sur Supabase.
- * Cycle complet avec le compte owner réel (production):
- *   enroll (Supabase génère le secret) → challenge → verify (code TOTP calculé
- *   localement, RFC 6238) → facteur vérifié → unenroll (compte laissé propre).
+ * Cycle complet avec un compte réel (production):
+ *   login → enroll (Supabase génère le secret) → challenge → verify (code TOTP
+ *   calculé localement, RFC 6238) → facteur vérifié → unenroll (compte propre).
+ *
+ * Usage (identifiants JAMAIS en dur dans le repo) :
+ *   HZ_TOTP_EMAIL=... HZ_TOTP_PASSWORD=... node scripts/test-totp-e2e.mjs
+ * (.env.local doit contenir VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY)
  */
 import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+
+const EMAIL = process.env.HZ_TOTP_EMAIL;
+const PASSWORD = process.env.HZ_TOTP_PASSWORD;
+if (!EMAIL || !PASSWORD) {
+  console.error('Usage: HZ_TOTP_EMAIL=... HZ_TOTP_PASSWORD=... node scripts/test-totp-e2e.mjs');
+  process.exit(1);
+}
 
 const env = readFileSync(new URL('../.env.local', import.meta.url), 'utf8');
 const SB_URL = env.match(/VITE_SUPABASE_URL=(\S+)/)?.[1];
@@ -37,10 +48,10 @@ function totp(secretB32, t = Math.floor(Date.now() / 30000)) {
 }
 
 async function main() {
-  // 1. Login owner
+  // 1. Login
   const login = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', apikey: ANON },
-    body: JSON.stringify({ email: 'owner@house-zen.app', password: 'ZM!E@MXHV676Cx3MWk9' }),
+    body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
   }).then((r) => r.json());
   if (!login.access_token) throw new Error('login failed: ' + JSON.stringify(login).slice(0, 200));
   const H = { apikey: ANON, Authorization: `Bearer ${login.access_token}`, 'Content-Type': 'application/json' };
@@ -50,39 +61,55 @@ async function main() {
   //    endpoints auth-js v2 — les anciens /mfa/* répondent 404 sur ce GoTrue)
   const enroll = await fetch(`${SB_URL}/auth/v1/factors`, {
     method: 'POST', headers: H,
-    body: JSON.stringify({ factor_type: 'totp', friendly_name: 'e2e-proof' }),
+    body: JSON.stringify({ factor_type: 'totp', friendly_name: 'qa-proof' }),
   }).then((r) => r.json());
   if (!enroll.id || !enroll.totp?.secret) throw new Error('enroll failed: ' + JSON.stringify(enroll).slice(0, 200));
-  console.log('2. ENROLL OK — factor:', enroll.id, '| secret émis par Supabase (base32,', enroll.totp.secret.length, 'car.)');
+  console.log('2. ENROLL OK — secret base32 reçu (' + enroll.totp.secret.length + ' chars)');
 
-  // 3. Challenge + verify avec un code calculé depuis le secret serveur
-  const challenge = await fetch(`${SB_URL}/auth/v1/factors/${enroll.id}/challenge`, {
-    method: 'POST', headers: H, body: JSON.stringify({}),
-  }).then((r) => r.json());
-  if (!challenge.id) throw new Error('challenge failed: ' + JSON.stringify(challenge).slice(0, 200));
-  console.log('3. CHALLENGE OK');
-
-  const code = totp(enroll.totp.secret);
-  // micro-attente pour éviter toute dérive de fenêtre
-  await new Promise((r) => setTimeout(r, 800));
-  const verify = await fetch(`${SB_URL}/auth/v1/factors/${enroll.id}/verify`, {
+  // 3. Challenge + verify avec le code RFC 6238 calculé localement
+  const ch = await fetch(`${SB_URL}/auth/v1/factors/${enroll.id}/challenge`, {
     method: 'POST', headers: H,
-    body: JSON.stringify({ challenge_id: challenge.id, code }),
   }).then((r) => r.json());
-  if (verify.error || !verify.access_token) throw new Error('verify failed: ' + JSON.stringify(verify).slice(0, 200));
-  console.log('4. VERIFY OK — code TOTP', code, 'accepté par Supabase, session AAL élevée:', verify.amr?.map((a) => a.method).join('+') ?? '(n/a)');
-
-  // 5. Le facteur est maintenant "verified" (liste via GET /auth/v1/user)
-  const user = await fetch(`${SB_URL}/auth/v1/user`, { headers: H }).then((r) => r.json());
-  const mine = (user.factors ?? []).filter((f) => f.id === enroll.id);
-  console.log('5. FACTEURS:', JSON.stringify(mine.map((f) => ({ id: f.id.slice(0, 8), status: f.status }))));
-
-  // 6. Unenroll — on ne laisse AUCUN facteur actif sur le compte owner
-  const unenroll = await fetch(`${SB_URL}/auth/v1/factors/${enroll.id}`, {
-    method: 'DELETE', headers: H, body: JSON.stringify({}),
+  if (!ch.id) throw new Error('challenge failed: ' + JSON.stringify(ch).slice(0, 200));
+  const code = totp(enroll.totp.secret);
+  const ver = await fetch(`${SB_URL}/auth/v1/factors/${enroll.id}/verify`, {
+    method: 'POST', headers: H,
+    body: JSON.stringify({ challenge_id: ch.id, code }),
   }).then((r) => r.json());
-  console.log('6. UNENROLL OK', JSON.stringify(unenroll).slice(0, 80));
-  console.log('\n✅ TOTP 100% FONCTIONNEL ET LIÉ À SUPABASE AUTH (vérifié en production).');
+  // GoTrue v2 renvoie une NOUVELLE session JWT (aal2) : access_token + refresh_token.
+  const verified = ver.verified === true || Boolean(ver.access_token);
+  if (!verified) throw new Error('verify failed: ' + JSON.stringify(ver).slice(0, 300));
+  const claims = ver.access_token ? JSON.parse(Buffer.from(ver.access_token.split('.')[1], 'base64').toString()) : {};
+  console.log(`3. CHALLENGE + VERIFY OK — code ${code} accepté, facteur VERIFIED, AAL=${claims.aal ?? 'n/a'}`);
+
+  // 4. Unenroll — nécessite une session AAL2 : on réutilise le NOUVEAU token
+  //    renvoyé par verify (GoTrue : "AAL2 required to unenroll verified factor").
+  const H2 = { apikey: ANON, Authorization: `Bearer ${ver.access_token ?? login.access_token}`, 'Content-Type': 'application/json' };
+  const un = await fetch(`${SB_URL}/auth/v1/factors/${enroll.id}`, {
+    method: 'DELETE', headers: H2,
+  }).then((r) => r.json());
+  if (un.id !== enroll.id) throw new Error('unenroll failed: ' + JSON.stringify(un).slice(0, 200));
+  console.log('4. UNENROLL OK — TOTP preuve complète: ENROLL→CHALLENGE→VERIFY→UNENROLL ✔');
 }
 
-main().catch((e) => { console.error('❌', e.message); process.exit(1); });
+main().catch(async (e) => {
+  console.error(e.message);
+  // Filet de sécurité : supprime tout facteur orphelin laissé par un run interrompu.
+  try {
+    const env2 = readFileSync(new URL('../.env.local', import.meta.url), 'utf8');
+    const u = env2.match(/VITE_SUPABASE_URL=(\S+)/)?.[1];
+    const a = env2.match(/VITE_SUPABASE_ANON_KEY=(\S+)/)?.[1];
+    const login = await fetch(`${u}/auth/v1/token?grant_type=password`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', apikey: a },
+      body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
+    }).then((r) => r.json());
+    if (login.access_token) {
+      const user = await fetch(`${u}/auth/v1/user`, { headers: { apikey: a, Authorization: `Bearer ${login.access_token}` } }).then((r) => r.json());
+      for (const f of user.factors ?? []) {
+        const del = await fetch(`${u}/auth/v1/factors/${f.id}`, { method: 'DELETE', headers: { apikey: a, Authorization: `Bearer ${login.access_token}` } });
+        console.error(`cleanup: facteur orphelin ${f.id} supprimé (HTTP ${del.status})`);
+      }
+    }
+  } catch { /* best effort */ }
+  process.exit(1);
+});

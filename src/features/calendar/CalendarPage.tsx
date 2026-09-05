@@ -21,12 +21,14 @@ export default function CalendarPage() {
   const [start, setStart] = useState(() => todayISO());
   const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDaysISO(start, i)), [start]);
 
-  const { data: rooms } = useEntityList<Record<string, unknown>>('rooms', {
+  const roomsQuery = useEntityList<Record<string, unknown>>('rooms', {
     sort: { room_number: 'asc' },
     pageSize: 500,
   });
-  const { data: reservations } = useEntityList<Reservation>('reservations', { pageSize: 500 });
-  const { data: reservationItems } = useEntityList<Record<string, unknown>>('reservation_items', { pageSize: 500 });
+  const { data: rooms, isLoading: roomsLoading } = roomsQuery;
+  const { data: reservations, isLoading: resLoading } = useEntityList<Reservation>('reservations', { pageSize: 500 });
+  const { data: reservationItems, isError: itemsError } = useEntityList<Record<string, unknown>>('reservation_items', { pageSize: 500 });
+  const loading = roomsLoading || resLoading;
 
   // room per reservation (join via reservation_items)
   const roomByReservation = useMemo(() => {
@@ -67,6 +69,15 @@ export default function CalendarPage() {
         }
       />
 
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label={t('common.loading')} />
+        </div>
+      ) : itemsError ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-destructive">{t('common.error')}</CardContent>
+        </Card>
+      ) : (
       <Card>
         <CardContent className="overflow-x-auto p-2 scrollbar-thin">
           <div className="min-w-[900px]">
@@ -116,6 +127,7 @@ export default function CalendarPage() {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

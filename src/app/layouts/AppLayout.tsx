@@ -195,8 +195,8 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           if (items.length === 0) return null;
           return (
             <div key={group.labelKey}>
-              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-50">
-                {group.labelKey === group.items[0]?.labelKey ? t(group.labelKey) : t(group.labelKey)}
+              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-60">
+                {t(group.labelKey)}
               </p>
               <ul className="space-y-0.5">
                 {items.map((item) => (
@@ -222,7 +222,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         })}
         {session?.isSuperAdmin ? (
           <div>
-            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-50">
+            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider opacity-60">
               {t('nav.admin')}
             </p>
             <NavLink
