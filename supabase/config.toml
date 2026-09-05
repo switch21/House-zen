@@ -4,6 +4,18 @@
 # de la plateforme est désactivée — le code effectue ses propres contrôles.
 project_id = "House-zen"
 
+# Parité avec la config GoTrue appliquée en prod (scripts/auth-config.mjs) :
+# site_url = domaine de production ; allow list = prod + serveurs de dev Vite
+# (dev 5173 / preview 4173). L'app n'utilise aucun redirectTo aujourd'hui —
+# la liste reste volontairement stricte (anti open-redirect).
+[auth]
+site_url = "https://house-zen.vercel.app"
+additional_redirect_urls = [
+  "https://house-zen.vercel.app/**",
+  "http://localhost:5173/**",
+  "http://localhost:4173/**",
+]
+
 [functions.api-v1]
 verify_jwt = false
 
