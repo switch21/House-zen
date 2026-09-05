@@ -21,6 +21,12 @@ export function RequireAuth({ children }: { children?: ReactNode }) {
   if (session.pendingMfa) {
     return <Navigate to="/mfa-challenge" replace state={{ from: location.pathname }} />;
   }
+  // Platform operators belong to no tenant: /app/* is tenant-scoped business
+  // surface and would render empty/erroring pages. Route them to the
+  // back-office they actually own (super admin without membership).
+  if (session.isSuperAdmin && !session.tenant && location.pathname.startsWith('/app')) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
   return <AppLayout>{children ?? <Outlet />}</AppLayout>;
 }
 

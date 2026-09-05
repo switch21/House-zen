@@ -2,6 +2,7 @@
 const sw: Record<string, string> = {
   'app.name': 'HOUSE-ZEN',
   'app.tagline': 'Usimamizi wa hoteli kwa utulivu.',
+  'app.platform': 'Jukwaa la HOUSE-ZEN',
   'common.loading': 'Inapakia…',
   'common.save': 'Hifadhi',
   'common.cancel': 'Ghairi',

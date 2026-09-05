@@ -46,7 +46,15 @@ export default function LoginPage() {
       const session = await getDataApi().signIn(values.email, values.password);
       await refresh();
       // AAL1 + verified factor → TOTP challenge before entering the app.
-      navigate(session.pendingMfa ? '/mfa-challenge' : '/app/dashboard');
+      // Platform super admins belong to no tenant: land them in the
+      // back-office, not the tenant-scoped business dashboard.
+      navigate(
+        session.pendingMfa
+          ? '/mfa-challenge'
+          : session.isSuperAdmin && !session.tenant
+            ? '/admin/dashboard'
+            : '/app/dashboard',
+      );
     } catch {
       // Generic localized message: never leak whether the email exists.
       setError(t('auth.invalidCredentials'));

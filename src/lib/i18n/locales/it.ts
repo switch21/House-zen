@@ -2,6 +2,7 @@
 const it: Record<string, string> = {
   'app.name': 'HOUSE-ZEN',
   'app.tagline': 'La gestione alberghiera, con serenità.',
+  'app.platform': 'Piattaforma HOUSE-ZEN',
   'common.loading': 'Caricamento…',
   'common.save': 'Salva',
   'common.cancel': 'Annulla',

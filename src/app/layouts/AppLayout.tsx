@@ -171,6 +171,10 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   // One tenant-scoped channel per tab: server changes invalidate query caches live.
   useRealtimeSync(tenantId);
   const nav = buildNav();
+  // Platform operators belong to NO tenant (profiles.is_super_admin, no
+  // membership): business pages are tenant-scoped and would only error, so
+  // their sidebar shows the platform back-office entry exclusively.
+  const platformOnly = Boolean(session?.isSuperAdmin && !session?.tenant);
 
   const sidebar = (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -184,7 +188,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         </div>
       </div>
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 pb-4 scrollbar-thin" aria-label="main">
-        {nav.map((group) => {
+        {platformOnly
+          ? null
+          : nav.map((group) => {
           const items = group.items.filter((i) => !i.permission || (session && can(session.role, i.permission)));
           if (items.length === 0) return null;
           return (
@@ -242,7 +248,9 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-xs font-medium">{session?.fullName}</p>
-            <p className="truncate text-[10px] opacity-70">{session?.tenant?.name ?? '—'}</p>
+            <p className="truncate text-[10px] opacity-70">
+              {session?.tenant?.name ?? (platformOnly ? t('app.platform') : '—')}
+            </p>
           </div>
         </div>
         <div className="flex items-center justify-between px-1">
@@ -286,7 +294,11 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 {mobileOpen ? <X size={18} /> : <Menu size={18} />}
               </Button>
               <span className="hidden text-xs text-muted-foreground sm:inline">
-                {session?.tenant?.name} · {session?.tenant?.currency} · {session?.tenant?.timezone}
+                {session?.tenant
+                  ? `${session.tenant.name} · ${session.tenant.currency} · ${session.tenant.timezone}`
+                  : platformOnly
+                    ? t('app.platform')
+                    : ''}
               </span>
             </div>
             <div className="flex items-center gap-1">

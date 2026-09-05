@@ -65,6 +65,21 @@ describe('super admin back-office (demo mirror)', () => {
     await expect(api.adminDeleteUser(self.id)).rejects.toThrow('CANNOT_DELETE_SELF');
   });
 
+  it('platform super admin belongs to no tenant and resolves a super_admin role', async () => {
+    // pat.epee-style account: profiles.is_super_admin=true, ZERO memberships —
+    // the session must expose role 'super_admin' with tenant=null (never the
+    // receptionist fallback) so /app/* stays out of reach (guards.tsx).
+    const session = await api.signIn('admin@house-zen.app', 'demo1234');
+    expect(session.isSuperAdmin).toBe(true);
+    expect(session.tenant).toBeNull();
+    expect(session.role).toBe('super_admin');
+    expect(session.memberships).toHaveLength(0);
+
+    const again = await api.getSession();
+    expect(again?.tenant).toBeNull();
+    expect(again?.role).toBe('super_admin');
+  });
+
   it('deletes a user', async () => {
     await api.adminCreateUser({ email: 'gone@example.com', full_name: 'Gone', password: 'password123' });
     const users = await api.adminListUsers();
@@ -114,7 +129,6 @@ describe('super admin back-office (demo mirror)', () => {
     await api.adminUpdatePlan(premium!.id, { monthly_price: 120000 });
     expect((await api.adminListPlans()).find((p) => p.id === premium!.id)?.monthly_price).toBe(120000);
 
-    const tenants = await api.adminTenantsOverview();
     const pro = plans.find((p) => p.code === 'FREE')!;
     await expect(api.adminDeletePlan(pro.id)).rejects.toThrow('PLAN_IN_USE');
 

@@ -4,6 +4,7 @@ import { Route, Routes, Navigate, Link } from 'react-router-dom';
 import { RequireAuth, RequirePermission, RequireSuperAdmin } from './guards';
 import { ROUTE_PERMISSIONS, type Permission } from '@/lib/permissions/rbac';
 import { useI18n } from '@/lib/i18n/provider';
+import { useAuth } from '@/lib/auth/context';
 
 // ---------------------------------------------------------------------------
 // Route-level code splitting — every page is a separate async chunk so the
@@ -92,18 +93,32 @@ function guarded(path: string, element: React.ReactNode) {
   );
 }
 
+/**
+ * Entry redirect: authenticated users land where their session makes sense.
+ * Platform super admins (no tenant) go straight to the back-office; MFA-pending
+ * sessions are routed to the challenge first; anonymous visitors to /login.
+ */
+function HomeRedirect() {
+  const { session, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!session) return <Navigate to="/login" replace />;
+  if (session.pendingMfa) return <Navigate to="/mfa-challenge" replace />;
+  if (session.isSuperAdmin && !session.tenant) return <Navigate to="/admin/dashboard" replace />;
+  return <Navigate to="/app/dashboard" replace />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/" element={<Navigate to="/app/dashboard" replace />} />
+      <Route path="/" element={<HomeRedirect />} />
       <Route path="/login" element={suspense(<LoginPage />)} />
       <Route path="/mfa-challenge" element={suspense(<MfaChallengePage />)} />
       <Route path="/book/:propertySlug" element={suspense(<PublicBookingPage />)} />
 
       {/* App (authenticated + RBAC-guarded) */}
       <Route element={<RequireAuth />}>
-        <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
+        <Route path="/app" element={<HomeRedirect />} />
         {guarded('/app/dashboard', <DashboardPage />)}
         {guarded('/app/calendar', <CalendarPage />)}
         {guarded('/app/reservations', <ReservationsPage />)}
