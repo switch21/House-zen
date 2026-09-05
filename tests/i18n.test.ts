@@ -1,7 +1,7 @@
 /**
- * HOUSE-ZEN — i18n coverage tests (PHASE 10).
- * fr = 100% base. en must be a full mirror. Other locales have documented
- * partial coverage with fr fallback (never blank, never hardcoded UI).
+ * HOUSE-ZEN — i18n coverage tests (PHASE 10, tightened at full-coverage pass).
+ * fr = 100% base. Every official locale must now fully mirror fr — no silent
+ * fallbacks, no blank values. Fallback chain stays as a runtime safety net.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,13 +27,14 @@ describe('i18n', () => {
     expect(ratio).toBe(1);
   });
 
-  it('secondary locales cover the navigation core and never crash on fallback', () => {
+  it('every locale fully mirrors fr (100% coverage, no empty values)', () => {
     for (const locale of ['es', 'de', 'ar', 'it', 'sw'] as const) {
-      const { ratio } = coverage(locale, [
-        'nav.dashboard', 'nav.reservations', 'nav.logout', 'auth.signIn',
-        'reservations.title', 'common.save', 'errors.notFound',
-      ]);
-      expect(ratio, `${locale} core coverage`).toBeGreaterThan(0.8);
+      const { missing, ratio } = coverage(locale, FR_KEYS);
+      expect(missing, `${locale} missing: ${missing.join(', ')}`).toHaveLength(0);
+      expect(ratio, `${locale} coverage`).toBe(1);
+      for (const key of FR_KEYS) {
+        expect(String(allTranslations[locale][key]).length, `${locale}:${key}`).toBeGreaterThan(0);
+      }
     }
   });
 
