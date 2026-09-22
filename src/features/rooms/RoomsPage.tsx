@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getDataApi } from '@/lib/api';
 import { DomainError } from '@/types/domain';
+import { friendlyErrorMessage } from '@/lib/utils/quota';
 import { useQueryClient } from '@tanstack/react-query';
 import { Wrench, Wrench as WrenchOff, CheckCircle2 } from 'lucide-react';
 
@@ -24,7 +25,7 @@ function RoomsActions({ row }: { row: Record<string, unknown> }) {
       await getDataApi().setRoomHousekeepingState(String(row.id), to);
       void qc.invalidateQueries({ queryKey: ['hz', 'rooms'] });
     } catch (e) {
-      window.alert(e instanceof DomainError ? e.message : t('common.error'));
+      window.alert(e instanceof DomainError ? e.message : friendlyErrorMessage(e, t));
     }
   }
 
@@ -36,7 +37,7 @@ function RoomsActions({ row }: { row: Record<string, unknown> }) {
       );
       void qc.invalidateQueries({ queryKey: ['hz', 'rooms'] });
     } catch (e) {
-      window.alert(e instanceof DomainError ? e.message : t('common.error'));
+      window.alert(e instanceof DomainError ? e.message : friendlyErrorMessage(e, t));
     }
   }
 

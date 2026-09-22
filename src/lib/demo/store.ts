@@ -245,7 +245,7 @@ export function buildSeed(): DemoDB {
   ];
 
   const housekeeping_logs: R[] = [
-    { id: 'hl-1', tenant_id: T, task_id: 'hk-3', from_state: 'DIRTY', to_state: 'CLEAN', changed_by: 'u-housekeeping', created_at: now },
+    { id: 'hl-1', tenant_id: T, room_id: 'r-106', task_id: 'hk-3', from_state: 'DIRTY', to_state: 'CLEAN', changed_by: 'u-housekeeping', created_at: now },
   ];
 
   const maintenance_tickets: R[] = [

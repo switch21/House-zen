@@ -756,8 +756,9 @@ export class DemoDataApi implements DataApi {
       throw new DomainError('INVALID_STATE', `Ménage: transition ${from} → ${to} interdite`);
     }
     room.housekeeping_state = to;
+    // Log shape mirrors migration 070: room transitions carry room_id (task_id is for task completions).
     this.db.housekeeping_logs.push({
-      id: uuid(), tenant_id: this.scope(), task_id: roomId, from_state: from, to_state: to,
+      id: uuid(), tenant_id: this.scope(), room_id: roomId, task_id: null, from_state: from, to_state: to,
       changed_by: this.currentUser().id, created_at: nowISO(),
     });
     this.audit('room.housekeeping_state', 'rooms', roomId, { state: from }, { state: to });
