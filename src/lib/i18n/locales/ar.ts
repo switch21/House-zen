@@ -226,6 +226,7 @@ const ar: Record<string, string> = {
   'housekeeping.assignedTo': 'مُسندة إلى',
   'housekeeping.priority': 'الأولوية',
   'housekeeping.scheduled': 'مخططة في',
+  'housekeeping.scheduledTime': 'الوقت المخطط',
   'housekeeping.markDone': 'وضع علامة منجزة',
   'housekeeping.startTask': 'بدء',
   'housekeeping.board': 'لوحة الغرف',

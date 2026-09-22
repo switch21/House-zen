@@ -226,6 +226,7 @@ const es: Record<string, string> = {
   'housekeeping.assignedTo': 'Asignada a',
   'housekeeping.priority': 'Prioridad',
   'housekeeping.scheduled': 'Planificada el',
+  'housekeeping.scheduledTime': 'Hora prevista',
   'housekeeping.markDone': 'Marcar como terminada',
   'housekeeping.startTask': 'Iniciar',
   'housekeeping.board': 'Tablero de habitaciones',

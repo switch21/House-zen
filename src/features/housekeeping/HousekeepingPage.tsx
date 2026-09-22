@@ -31,7 +31,7 @@ export default function HousekeepingPage() {
   const { t, locale } = useTranslation();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState({ room_id: '', assigned_to: '', priority: 'NORMAL', notes: '', scheduled_date: todayISO() });
+  const [draft, setDraft] = useState({ room_id: '', priority: 'NORMAL', notes: '', scheduled_date: todayISO(), scheduled_time: '' });
   const { data: tasks, isLoading } = useEntityList<Record<string, unknown>>('housekeeping_tasks', {
     sort: { scheduled_date: 'desc' },
     pageSize: 200,
@@ -65,7 +65,15 @@ export default function HousekeepingPage() {
 
   async function createTask() {
     try {
-      await create.mutateAsync({ ...draft, status: 'PENDING' });
+      // Optional columns must be absent or null — Postgres uuid columns reject ''.
+      await create.mutateAsync({
+        room_id: draft.room_id,
+        priority: draft.priority,
+        notes: draft.notes || null,
+        scheduled_date: draft.scheduled_date,
+        scheduled_time: draft.scheduled_time || null,
+        status: 'PENDING',
+      });
       // Creating a task for a CLEAN room flips it to DIRTY through the machine.
       const room = roomsById.get(draft.room_id);
       if (room && String(room.housekeeping_state) === 'CLEAN') {
@@ -123,7 +131,12 @@ export default function HousekeepingPage() {
                           {t(`housekeepingState.${String(room?.housekeeping_state ?? 'DIRTY')}`)}
                         </span>
                       </TableCell>
-                      <TableCell>{formatDate(String(task.scheduled_date), locale)}</TableCell>
+                      <TableCell>
+                        {formatDate(String(task.scheduled_date), locale)}
+                        {task.scheduled_time ? (
+                          <span className="text-muted-foreground"> · {String(task.scheduled_time).slice(0, 5)}</span>
+                        ) : null}
+                      </TableCell>
                       <TableCell>{t(`priority.${String(task.priority)}`)}</TableCell>
                       <TableCell>
                         <StatusBadge
@@ -181,9 +194,15 @@ export default function HousekeepingPage() {
                 </SelectContent>
               </UiSelect>
             </div>
-            <div className="space-y-1.5">
-              <Label>{t('housekeeping.scheduled')}</Label>
-              <Input type="date" value={draft.scheduled_date} onChange={(e) => setDraft((d) => ({ ...d, scheduled_date: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>{t('housekeeping.scheduled')}</Label>
+                <Input type="date" value={draft.scheduled_date} onChange={(e) => setDraft((d) => ({ ...d, scheduled_date: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t('housekeeping.scheduledTime')}</Label>
+                <Input type="time" value={draft.scheduled_time} onChange={(e) => setDraft((d) => ({ ...d, scheduled_time: e.target.value }))} />
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>{t('housekeeping.priority')}</Label>

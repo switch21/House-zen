@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { EntityCrudPage, type EntityCrudConfig } from '@/features/crud/EntityCrudPage';
 import { useEntityList, useEntityMutations } from '@/hooks/useEntity';
 import { useTranslation } from '@/hooks/useTranslation';
+import { friendlyErrorMessage } from '@/lib/utils/quota';
 import { formatMoney, formatDate, todayISO } from '@/lib/utils/money-dates';
 
 const expenseConfig: EntityCrudConfig = {
@@ -44,6 +45,7 @@ const expenseConfig: EntityCrudConfig = {
 function CategoriesTab() {
   const { t, locale } = useTranslation();
   const [name, setName] = useState('');
+  const [error, setError] = useState('');
   const { data } = useEntityList<Record<string, unknown>>('expense_categories', { pageSize: 100 });
   const { create } = useEntityMutations('expense_categories');
 
@@ -53,15 +55,22 @@ function CategoriesTab() {
         <div className="flex gap-2">
           <Input placeholder={t('common.name')} value={name} onChange={(e) => setName(e.target.value)} className="max-w-xs" />
           <Button
+            disabled={create.isPending}
             onClick={async () => {
               if (!name.trim()) return;
-              await create.mutateAsync({ name: name.trim() });
-              setName('');
+              setError('');
+              try {
+                await create.mutateAsync({ name: name.trim() });
+                setName('');
+              } catch (e) {
+                setError(friendlyErrorMessage(e, t));
+              }
             }}
           >
             <Plus size={15} /> {t('expenses.createCategory')}
           </Button>
         </div>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
         {!data || data.items.length === 0 ? (
           <EmptyState title={t('common.empty')} />
         ) : (

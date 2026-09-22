@@ -226,6 +226,7 @@ const sw: Record<string, string> = {
   'housekeeping.assignedTo': 'Imepewa',
   'housekeeping.priority': 'Kipaumbele',
   'housekeeping.scheduled': 'Imepangwa tarehe',
+  'housekeeping.scheduledTime': 'Saa iliyopangwa',
   'housekeeping.markDone': 'Weka alama imekamilika',
   'housekeeping.startTask': 'Anza',
   'housekeeping.board': 'Bodi ya vyumba',
