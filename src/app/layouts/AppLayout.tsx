@@ -48,6 +48,15 @@ function buildNav(): NavGroup[] {
       ],
     },
     {
+      labelKey: 'nav.finance',
+      items: [
+        { to: '/app/invoices', labelKey: 'nav.invoices', icon: <Receipt size={16} />, permission: 'invoices.read' },
+        { to: '/app/payments', labelKey: 'nav.payments', icon: <Wallet size={16} />, permission: 'payments.read' },
+        { to: '/app/expenses', labelKey: 'nav.expenses', icon: <TrendingDown size={16} />, permission: 'expenses.read' },
+        { to: '/app/suppliers', labelKey: 'nav.suppliers', icon: <Package size={16} />, permission: 'suppliers.read' },
+      ],
+    },
+    {
       labelKey: 'nav.operations',
       items: [
         { to: '/app/housekeeping', labelKey: 'nav.housekeeping', icon: <Sparkles size={16} />, permission: 'housekeeping.read' },
@@ -64,15 +73,6 @@ function buildNav(): NavGroup[] {
         { to: '/app/room-types', labelKey: 'nav.roomTypes', icon: <ListTree size={16} />, permission: 'room_types.read' },
         { to: '/app/amenities', labelKey: 'nav.amenities', icon: <Tags size={16} />, permission: 'amenities.read' },
         { to: '/app/rates', labelKey: 'nav.rates', icon: <TrendingUp size={16} />, permission: 'rates.read' },
-      ],
-    },
-    {
-      labelKey: 'nav.finance',
-      items: [
-        { to: '/app/invoices', labelKey: 'nav.invoices', icon: <Receipt size={16} />, permission: 'invoices.read' },
-        { to: '/app/payments', labelKey: 'nav.payments', icon: <Wallet size={16} />, permission: 'payments.read' },
-        { to: '/app/expenses', labelKey: 'nav.expenses', icon: <TrendingDown size={16} />, permission: 'expenses.read' },
-        { to: '/app/suppliers', labelKey: 'nav.suppliers', icon: <Package size={16} />, permission: 'suppliers.read' },
       ],
     },
     {
