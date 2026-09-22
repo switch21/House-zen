@@ -63,10 +63,6 @@ begin
            end as a_ref
     from audit_logs a
     where a.tenant_id = hz_current_tenant_id()
-      and (p_search is null or btrim(p_search) = ''
-           or a.action ilike '%' || p_search || '%'
-           or a.entity ilike '%' || p_search || '%'
-           or coalesce((select pf.email::text from profiles pf where pf.id = a.actor_id), '') ilike '%' || p_search || '%')
     order by a.created_at desc
     limit least(greatest(coalesce(p_limit, 200), 1), 500)
   )
@@ -75,7 +71,13 @@ begin
          p.email::text as actor_email,
          f.a_created
   from feed f
-  left join profiles p on p.id = f.a_actor;
+  left join profiles p on p.id = f.a_actor
+  where (p_search is null or btrim(p_search) = ''
+         or f.a_action ilike '%' || p_search || '%'
+         or f.a_entity ilike '%' || p_search || '%'
+         or coalesce(f.a_ref, '') ilike '%' || p_search || '%'
+         or coalesce(p.email::text, '') ilike '%' || p_search || '%'
+         or coalesce(p.full_name, '') ilike '%' || p_search || '%');
 end $$;
 
 revoke execute on function hz_audit_feed(text, int) from public, anon;

@@ -355,9 +355,11 @@ export class DemoDataApi implements DataApi {
       .filter((l) => {
         if (!needle) return true;
         const actor = this.db.users.find((u) => u.id === l.actor_id);
+        const ref = this.auditRef(String(l.entity), (l.entity_id as string | null) ?? null) ?? '';
         return (
           String(l.action).toLowerCase().includes(needle) ||
           String(l.entity).toLowerCase().includes(needle) ||
+          ref.toLowerCase().includes(needle) ||
           (actor?.email ?? '').toLowerCase().includes(needle) ||
           (actor?.full_name ?? '').toLowerCase().includes(needle)
         );

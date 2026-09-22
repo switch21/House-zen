@@ -56,13 +56,16 @@ describe('demo auditFeed (server parity, migration 067)', () => {
     expect(row?.actor_name).toBe('Arlette Nkeng');
   });
 
-  it('search filters on action and actor', async () => {
+  it('search filters on action, actor and business reference', async () => {
     const api = new DemoDataApi(buildSeed());
     await api.signIn('owner@demo.house-zen.app', 'demo1234');
     const byAction = await api.auditFeed('tenant.created');
     expect(byAction.length).toBeGreaterThan(0);
     const byActor = await api.auditFeed('arlette');
     expect(byActor.length).toBeGreaterThan(0);
+    // Reference search: a seeded reservation reference is resolvable.
+    const byRef = await api.auditFeed('HZ-2026');
+    expect(byRef.some((e) => (e.ref ?? '').includes('HZ-2026'))).toBe(true);
     const none = await api.auditFeed('inexistant-xyz');
     expect(none).toHaveLength(0);
     void T;
