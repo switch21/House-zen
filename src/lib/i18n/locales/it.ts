@@ -289,6 +289,12 @@ const it: Record<string, string> = {
   'reports.occupancy': 'Occupazione',
   'reports.revenue': 'Ricavi',
   'reports.exportCsv': 'Esporta CSV',
+
+
+
+  'reports.adr': 'Prezzo medio per camera (ADR)',
+  'reports.revpar': 'RevPAR (ricavo per camera disponibile)',
+  'reports.exports': 'Esportazione giornaliera',
   'team.title': 'Team',
   'team.invite': 'Invita un membro',
   'team.role': 'Ruolo',

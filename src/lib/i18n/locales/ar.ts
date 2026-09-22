@@ -289,6 +289,12 @@ const ar: Record<string, string> = {
   'reports.occupancy': 'الإشغال',
   'reports.revenue': 'الإيرادات',
   'reports.exportCsv': 'تصدير CSV',
+
+
+
+  'reports.adr': 'متوسط سعر الليلة (ADR)',
+  'reports.revpar': 'RevPAR (إيراد الغرفة المتاحة)',
+  'reports.exports': 'تصدير يومي',
   'team.title': 'الفريق',
   'team.invite': 'دعوة عضو',
   'team.role': 'الدور',

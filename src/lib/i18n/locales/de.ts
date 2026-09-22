@@ -289,6 +289,12 @@ const de: Record<string, string> = {
   'reports.occupancy': 'Auslastung',
   'reports.revenue': 'Umsatz',
   'reports.exportCsv': 'CSV exportieren',
+
+
+
+  'reports.adr': 'Durchschnittspreis pro Zimmer (ADR)',
+  'reports.revpar': 'RevPAR (Erlös pro verfügbarem Zimmer)',
+  'reports.exports': 'Täglicher Export',
   'team.title': 'Team',
   'team.invite': 'Mitglied einladen',
   'team.role': 'Rolle',

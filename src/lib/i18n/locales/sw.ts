@@ -289,6 +289,12 @@ const sw: Record<string, string> = {
   'reports.occupancy': 'Umajilivu',
   'reports.revenue': 'Mapato',
   'reports.exportCsv': 'Hamisha CSV',
+
+
+
+  'reports.adr': 'Bei wastani kwa chumba (ADR)',
+  'reports.revpar': 'RevPAR (mapato kwa chumba kinachopatikana)',
+  'reports.exports': 'Hamisho la kila siku',
   'team.title': 'Timu',
   'team.invite': 'Karibisha mwanachama',
   'team.role': 'Wadhifa',

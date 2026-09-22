@@ -288,6 +288,12 @@ const en: Record<string, string> = {
   'reports.occupancy': 'Occupancy',
   'reports.revenue': 'Revenue',
   'reports.exportCsv': 'Export CSV',
+
+
+
+  'reports.adr': 'Average daily rate (ADR)',
+  'reports.revpar': 'RevPAR (revenue per available room)',
+  'reports.exports': 'Daily export',
   'team.title': 'Team',
   'team.invite': 'Invite member',
   'team.role': 'Role',
