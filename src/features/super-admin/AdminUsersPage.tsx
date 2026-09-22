@@ -68,6 +68,18 @@ export default function AdminUsersPage() {
   const invalidate = () => void qc.invalidateQueries({ queryKey: ['admin'] });
   const fail = (e: unknown) => setError(String(e).replace(/^Error:\s*/, ''));
 
+  /* Mutations set `error` — render it INSIDE the open dialog too: the page-level
+   * banner sits behind the modal overlay, so a failing RPC (e.g. reset
+   * password) used to look like a dead confirm button with no feedback. */
+  const dialogError = error ? (
+    <p
+      role="alert"
+      className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+    >
+      {error}
+    </p>
+  ) : null;
+
   const createUser = useMutation({
     mutationFn: () =>
       getDataApi().adminCreateUser({ email, full_name: fullName, locale: userLocale, password }),
@@ -294,6 +306,7 @@ export default function AdminUsersPage() {
               </Select>
             </label>
           </div>
+          {dialogError}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialog(null)}>
               {t('common.cancel')}
@@ -333,6 +346,7 @@ export default function AdminUsersPage() {
               </Select>
             </label>
           </div>
+          {dialogError}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialog(null)}>
               {t('common.cancel')}
@@ -360,6 +374,7 @@ export default function AdminUsersPage() {
               minLength={8}
             />
           </label>
+          {dialogError}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialog(null)}>
               {t('common.cancel')}
@@ -410,6 +425,7 @@ export default function AdminUsersPage() {
               </Select>
             </label>
           </div>
+          {dialogError}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialog(null)}>
               {t('common.cancel')}
