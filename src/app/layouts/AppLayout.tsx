@@ -36,7 +36,6 @@ function buildNav(): NavGroup[] {
         { to: '/app/dashboard', labelKey: 'nav.dashboard', icon: <LayoutDashboard size={16} /> },
         { to: '/app/calendar', labelKey: 'nav.calendar', icon: <CalendarDays size={16} />, permission: 'reservations.read' },
         { to: '/app/reports', labelKey: 'nav.reports', icon: <Gauge size={16} />, permission: 'reports.read' },
-        { to: '/app/audit', labelKey: 'nav.audit', icon: <ScrollText size={16} />, permission: 'audit.read' },
       ],
     },
     {
@@ -80,6 +79,7 @@ function buildNav(): NavGroup[] {
       labelKey: 'nav.settings',
       items: [
         { to: '/app/team', labelKey: 'nav.team', icon: <Users size={16} />, permission: 'team.read' },
+        { to: '/app/audit', labelKey: 'nav.audit', icon: <ScrollText size={16} />, permission: 'audit.read' },
         { to: '/app/settings', labelKey: 'nav.settings', icon: <Settings size={16} />, permission: 'settings.read' },
         { to: '/app/subscription', labelKey: 'nav.subscription', icon: <CreditCard size={16} />, permission: 'subscription.read' },
       ],
