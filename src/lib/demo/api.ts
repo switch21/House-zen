@@ -41,6 +41,8 @@ import type {
 import { dataChangeBus, type RealtimeEventType } from '@/lib/realtime/bus';
 import { demoMfaStore } from '@/lib/demo/mfa-store';
 import { buildSeed, DEMO_TENANT_ID, type DemoDB, type DemoUser, type Row } from './store';
+import type { QuotaKind } from '@/lib/utils/quota';
+import { quotaDomainError } from '@/lib/utils/quota';
 import {
   addMoney,
   mulMoney,
@@ -246,6 +248,10 @@ export class DemoDataApi implements DataApi {
       tenant_id: (rec.tenant_id as string | null | undefined) ?? this.scope(),
       created_at: (rec.created_at as string | undefined) ?? nowISO(),
     };
+    // Plan quota guard (server parity: BEFORE INSERT triggers, migration 064).
+    if (entity === 'properties' || entity === 'rooms') {
+      this.assertQuota(entity);
+    }
     this.table(entity).push(row);
     this.audit(`${entity}.created`, entity, row.id, null, row);
     this.emitChange(entity, 'INSERT', row.id);
@@ -926,6 +932,33 @@ export class DemoDataApi implements DataApi {
       });
   }
 
+  /* ==================== Plan quota (mirrors migration 064 triggers) ==== */
+
+  /** Server parity: BEFORE INSERT quota guards on properties/rooms/memberships.
+   *  Same canonical error message as the SQL path so one UI parser serves both. */
+  private planQuota(kind: QuotaKind): { limit: number; plan: string } | null {
+    const sub = this.db.subscriptions.find((s) => s.tenant_id === this.scope());
+    const plan = this.db.plans.find((p) => p.id === sub?.plan_id);
+    if (!plan || !sub) return null; // mirrors fail-closed when unprovisioned
+    const limit =
+      kind === 'properties' ? (plan.max_properties as number)
+      : kind === 'rooms' ? (plan.max_rooms as number)
+      : (plan.max_users as number);
+    return { limit, plan: String(plan.code) };
+  }
+
+  private assertQuota(kind: QuotaKind): void {
+    const q = this.planQuota(kind);
+    if (!q) {
+      throw new DomainError('QUOTA_EXCEEDED', `QUOTA_EXCEEDED: ${kind} blocked (no active subscription)`);
+    }
+    const used =
+      kind === 'properties' ? this.db.properties.filter((r) => r.tenant_id === this.scope()).length
+      : kind === 'rooms' ? this.db.rooms.filter((r) => r.tenant_id === this.scope()).length
+      : this.db.users.filter((u) => u.tenant_id === this.scope()).length;
+    if (used >= q.limit) throw quotaDomainError(kind, q.limit, q.plan);
+  }
+
   /* ==================== SUBSCRIPTION ==================== */
 
   async getSubscription(): Promise<{
@@ -955,6 +988,14 @@ export class DemoDataApi implements DataApi {
     const tenant = this.scope();
     const plan = this.db.plans.find((p) => p.code === planCode);
     if (!plan) throw new DomainError('NOT_FOUND', 'Plan inconnu');
+    // Downgrade guard (server parity: change_plan RPC, migrations 042/059).
+    const over =
+      this.db.properties.filter((r) => r.tenant_id === tenant).length > (plan.max_properties as number) ||
+      this.db.rooms.filter((r) => r.tenant_id === tenant).length > (plan.max_rooms as number) ||
+      this.db.users.filter((u) => u.tenant_id === tenant).length > (plan.max_users as number);
+    if (over) {
+      throw new DomainError('QUOTA_EXCEEDED', 'QUOTA_EXCEEDED: usage exceeds target plan');
+    }
     const sub = this.db.subscriptions.find((s) => s.tenant_id === tenant);
     if (sub) {
       this.audit('subscription.plan_changed', 'subscriptions', sub.id, { plan_id: sub.plan_id }, { plan_id: plan.id });
@@ -1130,6 +1171,18 @@ export class DemoDataApi implements DataApi {
     const u = this.db.users.find((x) => x.id === userId);
     if (!u) throw new DomainError('NOT_FOUND', 'USER_NOT_FOUND');
     this.requireTenantExists(tenantId);
+    // New seat only: re-assigning a user already in the tenant is a role
+    // update and must NOT consume a seat (mirrors 064 memberships guard).
+    if (u.tenant_id !== tenantId) {
+      const sub = this.db.subscriptions.find((s) => s.tenant_id === tenantId);
+      const plan = this.db.plans.find((p) => p.id === sub?.plan_id);
+      if (plan) {
+        const used = this.db.users.filter((x) => x.tenant_id === tenantId).length;
+        if (used >= (plan.max_users as number)) {
+          throw quotaDomainError('users', plan.max_users as number, String(plan.code));
+        }
+      }
+    }
     u.tenant_id = tenantId;
     u.role = role;
     this.audit('admin.user_assigned', 'memberships', userId, null, { tenant_id: tenantId, role });

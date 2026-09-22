@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageHeader } from '@/components/layout/shared';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/useTranslation';
+import { friendlyErrorMessage } from '@/lib/utils/quota';
 import { getDataApi } from '@/lib/api';
 import type { AdminUser } from '@/lib/api/types';
 import type { UserRole, UUID } from '@/types/domain';
@@ -66,7 +67,9 @@ export default function AdminUsersPage() {
   });
 
   const invalidate = () => void qc.invalidateQueries({ queryKey: ['admin'] });
-  const fail = (e: unknown) => setError(String(e).replace(/^Error:\s*/, ''));
+  // Quota violations (e.g. admin_assign_user_to_tenant on a full plan —
+  // migration 064) become localized; everything else passes through raw.
+  const fail = (e: unknown) => setError(friendlyErrorMessage(e, t));
 
   /* Mutations set `error` — render it INSIDE the open dialog too: the page-level
    * banner sits behind the modal overlay, so a failing RPC (e.g. reset

@@ -6,6 +6,7 @@
  */
 
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { parseQuotaViolation, quotaDomainError } from '@/lib/utils/quota';
 import type {
   AdminCreateTenantInput,
   AdminCreateUserInput,
@@ -36,9 +37,17 @@ type AnyRow = Record<string, unknown>;
 export class SupabaseDataApi implements DataApi {
   private sb = getSupabaseClient();
 
+  /** Server errors: quota violations (migration 064 triggers) become typed
+   *  DomainErrors so the UI can translate them; the rest stay raw. */
+  private mapError(raw: string): Error {
+    const v = parseQuotaViolation(raw);
+    if (v) return quotaDomainError(v.kind, v.limit, v.plan);
+    return new Error(raw);
+  }
+
   private async rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
     const { data, error } = await this.sb.rpc(fn, args);
-    if (error) throw new Error(`${fn}: ${error.message}`);
+    if (error) throw this.mapError(`${fn}: ${error.message}`);
     return data as T;
   }
 
@@ -146,7 +155,7 @@ export class SupabaseDataApi implements DataApi {
       .insert(data as never)
       .select('*')
       .maybeSingle<AnyRow>();
-    if (error) throw new Error(`${String(entity)}: ${error.message}`);
+    if (error) throw this.mapError(`${String(entity)}: ${error.message}`);
     return created as T;
   }
 

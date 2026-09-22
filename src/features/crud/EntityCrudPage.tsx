@@ -20,6 +20,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useAuth } from '@/lib/auth/context';
 import { can, type Permission } from '@/lib/permissions/rbac';
 import { getDataApi, type EntityName } from '@/lib/api';
+import { friendlyErrorMessage } from '@/lib/utils/quota';
 import { formatMoney, formatDate } from '@/lib/utils/money-dates';
 import { PhotosInput } from '@/features/crud/PhotosInput';
 import type { UUID } from '@/types/domain';
@@ -218,7 +219,8 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
       }
       setDialogOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      // Quota violations (plan limits, migration 064) surface localized.
+      setError(friendlyErrorMessage(e, t));
     }
   }
 
@@ -227,7 +229,7 @@ export function EntityCrudPage({ config }: { config: EntityCrudConfig }) {
     try {
       await remove.mutateAsync(row.id as UUID);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'));
+      setError(friendlyErrorMessage(e, t));
     }
   }
 
