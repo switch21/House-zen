@@ -26,6 +26,7 @@ import type {
   Reservation,
   ReservationStatus,
   TeamMember,
+  AuditFeedEntry,
   Tenant,
   TenantPlanCode,
   UserRole,
@@ -187,6 +188,15 @@ export class SupabaseDataApi implements DataApi {
   /** Team page: memberships + profiles via SECURITY DEFINER RPC (team.read). */
   async teamDirectory(): Promise<TeamMember[]> {
     return this.rpc<TeamMember[]>('hz_team_directory', {});
+  }
+
+  /** Human-readable audit journal: actor identity + business reference per
+   *  row, resolved server-side (migration 067) — gated on audit.read. */
+  async auditFeed(search?: string): Promise<AuditFeedEntry[]> {
+    return this.rpc<AuditFeedEntry[]>('hz_audit_feed', {
+      p_search: search?.trim() ? search.trim() : null,
+      p_limit: 200,
+    });
   }
 
   /**

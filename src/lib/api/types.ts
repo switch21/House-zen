@@ -5,6 +5,7 @@
  */
 
 import type {
+  AuditFeedEntry,
   AvailableRoomType,
   Notification,
   Payment,
@@ -217,6 +218,14 @@ export interface DataApi {
    * Demo: derived from the demo user directory (documented simulation).
    */
   teamDirectory(): Promise<TeamMember[]>;
+
+  /**
+   * Human-readable audit journal (spec §30): recent tenant audit rows with
+   * the actor's identity and a business reference per entity, resolved
+   * server-side. Real mode: SECURITY DEFINER RPC `hz_audit_feed` gated on
+   * `audit.read`. Demo: in-memory mirror (documented simulation).
+   */
+  auditFeed(search?: string): Promise<AuditFeedEntry[]>;
 
   /**
    * Establishment logo (Settings → Général). Real mode: Supabase Storage

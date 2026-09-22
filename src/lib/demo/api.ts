@@ -9,6 +9,7 @@
 
 import {
   DomainError,
+  type AuditFeedEntry,
   type AvailableRoomType,
   type Notification,
   type Plan,
@@ -313,6 +314,69 @@ export class DemoDataApi implements DataApi {
         role: u.role as TeamMember['role'],
         joined_at: (u as { created_at?: string }).created_at ?? new Date().toISOString(),
       }));
+  }
+
+  /** Demo mirror of hz_audit_feed (migration 067): tenant-scoped rows with
+   *  the actor identity and a business reference per entity. */
+  private auditRef(entity: string, entityId: string | null): string | null {
+    if (!entityId) return null;
+    const first = <T>(rows: readonly unknown[], id: string): T | undefined =>
+      rows.find((r) => (r as { id?: string }).id === id) as T | undefined;
+    switch (entity) {
+      case 'reservations': return first<{ reference: string }>(this.db.reservations, entityId)?.reference ?? null;
+      case 'invoices': return first<{ number: string }>(this.db.invoices, entityId)?.number ?? null;
+      case 'payments': {
+        const p = first<{ amount: number; currency: string; method: string }>(this.db.payments, entityId);
+        return p ? `${p.amount} ${p.currency} · ${p.method}` : null;
+      }
+      case 'properties': return first<{ name: string }>(this.db.properties, entityId)?.name ?? null;
+      case 'rooms': return first<{ room_number: string }>(this.db.rooms, entityId)?.room_number ?? null;
+      case 'room_types': return first<{ name: string }>(this.db.room_types, entityId)?.name ?? null;
+      case 'services': return first<{ name: string }>(this.db.services, entityId)?.name ?? null;
+      case 'tax_rates': return first<{ name: string }>(this.db.tax_rates, entityId)?.name ?? null;
+      case 'customers': return first<{ full_name: string }>(this.db.customers, entityId)?.full_name ?? null;
+      case 'tenants': return first<{ name: string }>(this.db.tenants, entityId)?.name ?? null;
+      case 'profiles': return first<{ email: string }>(this.db.users, entityId)?.email ?? null;
+      case 'housekeeping_tasks': {
+        const h = first<{ room_id: string; scheduled_date: string }>(this.db.housekeeping_tasks, entityId);
+        if (!h) return null;
+        const room = first<{ room_number: string }>(this.db.rooms, h.room_id);
+        return room ? `${room.room_number} · ${String(h.scheduled_date).slice(0, 10)}` : null;
+      }
+      case 'maintenance_tickets': return first<{ title: string }>(this.db.maintenance_tickets, entityId)?.title ?? null;
+      default: return null;
+    }
+  }
+
+  async auditFeed(search?: string): Promise<AuditFeedEntry[]> {
+    const needle = search?.trim().toLowerCase() ?? '';
+    return this.db.audit_logs
+      .filter((l) => l.tenant_id === this.scope())
+      .filter((l) => {
+        if (!needle) return true;
+        const actor = this.db.users.find((u) => u.id === l.actor_id);
+        return (
+          String(l.action).toLowerCase().includes(needle) ||
+          String(l.entity).toLowerCase().includes(needle) ||
+          (actor?.email ?? '').toLowerCase().includes(needle) ||
+          (actor?.full_name ?? '').toLowerCase().includes(needle)
+        );
+      })
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, 200)
+      .map((l) => {
+        const actor = this.db.users.find((u) => u.id === l.actor_id);
+        return {
+          id: l.id as UUID,
+          action: String(l.action),
+          entity: String(l.entity),
+          entity_id: (l.entity_id as UUID | null) ?? null,
+          ref: this.auditRef(String(l.entity), (l.entity_id as string | null) ?? null),
+          actor_name: actor ? (actor.full_name || actor.email) : null,
+          actor_email: actor?.email ?? null,
+          created_at: String(l.created_at),
+        };
+      });
   }
 
   /** Logo (demo): persisted as a data URL on the demo tenant row. */

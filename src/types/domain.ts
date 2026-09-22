@@ -40,6 +40,20 @@ export interface TeamMember {
   joined_at: string;
 }
 
+/** One human-readable audit journal row (spec §30) — hz_audit_feed. */
+export interface AuditFeedEntry {
+  id: UUID;
+  action: string;
+  entity: string;
+  entity_id: UUID | null;
+  /** Business reference resolved server-side (reservation reference, invoice
+   *  number, payment amount+method, room number, …) — null when unavailable. */
+  ref: string | null;
+  actor_name: string | null;
+  actor_email: string | null;
+  created_at: string;
+}
+
 export type UserRole =
   | 'owner' | 'manager' | 'receptionist' | 'accountant'
   | 'housekeeping' | 'maintenance' | 'super_admin';
