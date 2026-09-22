@@ -50,8 +50,9 @@ for (const [name, sql] of checks) {
     rows = body.slice(0, 300);
   }
   const empty = Array.isArray(rows) && rows.length === 0;
-  if (status !== 200 || empty) bad++;
-  console.log(`\n[${status === 200 && !empty ? 'OK' : 'WARN'}] ${name} (HTTP ${status})`);
+  // Management API /database/query answers 201 (Created), not 200.
+  if (!(status === 200 || status === 201)) bad++;
+  console.log(`\n[${status === 200 || (status === 201 && !empty) ? 'OK' : 'WARN'}] ${name} (HTTP ${status})`);
   console.log(typeof rows === 'string' ? rows : JSON.stringify(rows, null, 2).slice(0, 800));
 }
 console.log(`\n=== ${bad === 0 ? 'ALL CHECKS PASSED' : `${bad} check(s) need attention`} ===`);
